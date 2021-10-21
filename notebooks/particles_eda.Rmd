@@ -1,0 +1,138 @@
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(sf)
+library(USAboundariesData)
+
+particles <- read_rds("particles.rds")
+particles <- st_as_sf(particles)
+class(particles)
+```
+
+```{r}
+head(particles)
+```
+
+```{r}
+US_tracts <- st_read("./nhgis0026_shapefile_tl2016_us_tract_2016/US_tract_2016.shp")
+TX_tracts <- US_tracts %>% 
+  dplyr::filter(STATEFP == "48")
+rm(US_tracts)
+class(TX_tracts)
+p4s <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m"
+TX_tracts <- st_transform(TX_tracts, p4s)
+TX_tracts
+```
+
+```{r}
+counties = USAboundaries::us_counties()
+counties %<>% 
+  select(-state_name) %>% 
+  filter(statefp == "48")
+counties <- st_transform(counties, p4s)
+counties
+```
+
+
+## 3 month exposure
+
+```{r}
+TX_tracts$count <- lengths(st_intersects(TX_tracts, particles))
+
+library(viridis)
+library(cowplot)
+ggplot() +
+  geom_sf(data = TX_tracts, aes(fill = count), size = 0.001) + 
+  scale_fill_viridis(option = "B", alpha = 0.8) + 
+  theme_cowplot()
+```
+
+trim zero and above pbl
+
+```{r}
+particles_trim <- particles %>% 
+  filter(height > 0, 
+         height <= 2665)
+
+TX_tracts$count <- lengths(st_intersects(TX_tracts, particles_trim))
+
+ggplot() +
+  geom_sf(data = TX_tracts, aes(fill = count), size = 0.001) + 
+  scale_fill_viridis(option = "B", alpha = 0.8) + 
+  theme_cowplot()
+```
+
+```{r}
+counties$count <- lengths(st_intersects(counties, particles_trim))
+
+ggplot() +
+  geom_sf(data = counties, aes(fill = count), size = 0.001) + 
+  scale_fill_viridis(option = "B", alpha = 0.8) + 
+  theme_cowplot()
+```
+
+## weekly density
+
+```{r}
+library(lubridate)
+particles %<>% 
+  mutate(week = lubridate::week(Pdate))
+
+particles_trim %<>% 
+  mutate(week = lubridate::week(Pdate))
+
+table(particles$week)
+table(particles_trim$week)
+```
+
+```{r}
+p <- list()
+for(x in unique(particles$week)) {
+  xx <- particles_trim %>% 
+    filter(week == x)
+  TX_tracts$density <- lengths(st_intersects(TX_tracts, xx)) / 
+  as.numeric(st_area(TX_tracts)) * 1e3
+
+p[[x]] <- ggplot() +
+  geom_sf(data = TX_tracts, aes(fill = density), size = 0.001) + 
+  scale_fill_viridis(option = "B", alpha = 0.8) + 
+  theme_cowplot()
+}
+p
+```
+
+```{r}
+p <- list()
+for(x in unique(particles$week)) {
+  xx <- particles_trim %>% 
+    filter(week == x)
+  TX_tracts$density <- lengths(st_intersects(TX_tracts, xx)) / 
+  as.numeric(st_area(TX_tracts)) * 1e3
+
+p[[x]] <- ggplot() +
+  geom_sf(data = TX_tracts, aes(fill = density), size = 0.001) + 
+  scale_fill_viridis(option = "B", alpha = 0.8) + 
+  theme_cowplot()
+}
+p
+```
+
+
+## how far do they go
+
+```{r}
+p <- list()
+for(x in unique(particles$hour)) {
+  xx <- particles_trim %>% 
+    filter(hour == x)
+  TX_tracts$density <- lengths(st_intersects(TX_tracts, xx)) / 
+  as.numeric(st_area(TX_tracts)) * 1e3
+
+p[[x]] <- ggplot() +
+  geom_sf(data = TX_tracts, aes(fill = density), size = 0.001) + 
+  scale_fill_viridis(option = "B", alpha = 0.8) + 
+  theme_cowplot()
+}
+p
+```
