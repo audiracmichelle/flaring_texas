@@ -117,73 +117,86 @@ linked_counties <- disperseR::link_all_units(
 
 write_rds(linked_counties, "linked_counties.rds")
 
-impact_table_county_single <- disperseR::create_impact_table_single(
-  data.linked=linked_counties,
-  link.to = 'counties',
-  data.units = units.run,
-  counties. = USAboundaries::us_counties( ) %>%
-    filter(statefp == "48"),
-  map.unitID = "48013960100",
-  map.month = "20161",
-  metric = 'N')
+#### ####
 
+d <- list()
+for(x in year.mons) {
+  print(x)
+  month_YYYYMM = x
+  #month_YYYYMM = yearmons[1]
+  duration.run.hours = 12
+  
+  start.date <-
+    as.Date(paste(
+      substr(month_YYYYMM, 1, 4),
+      substr(month_YYYYMM, 5, 6),
+      '01',
+      sep = '-'
+    ))
+  end.date <-
+    seq(start.date, by = paste (1, "months"), length = 2)[2] - 1
+  
+  ## name the eventual output file
+  #output_file <-
+  #  file.path( ziplink_dir,
+  #             paste0("countylinks_", unit$ID, "_", start.date, "_", end.date, ".fst"))
+  
+  ## identify dates for hyspdisp averages and dates for files to read in
+  vec_dates <-
+    as(
+      seq.Date(
+        as.Date(start.date),
+        as.Date(end.date),
+        by = '1 day'),
+      'character')
+  vec_filedates <-
+    seq.Date(
+      from = as.Date( start.date) - ceiling( duration.run.hours / 24), # <----- validate
+      to = as.Date( end.date),
+      by = '1 day'
+    )
+  
+  ## list the files
+  pattern.file <-
+    paste0( '_',
+            gsub( '[*]', '[*]', unit$ID),
+            '_(',
+            paste(vec_filedates, collapse = '|'),
+            ').*\\.fst$'
+    )
+  hysp_dir.path <-
+    file.path( hysp_dir,
+               unique( paste( year( vec_filedates),
+                              formatC( month( vec_filedates), width = 2, flag = '0'),
+                              sep = '/')))
+  files.read <-
+    list.files( path = hysp_dir.path,
+                pattern = pattern.file,
+                recursive = F,
+                full.names = T)
+  
+  ## read in the files
+  d_ <- lapply(files.read, read.fst, as.data.table = TRUE)
+  
+  # if( length( d) == 0)
+  #   return( paste( "No files available to link in", month_YYYYMM))
+  # print(  paste( Sys.time(), "Files read and combined"))
+  
+  ## Combine all parcels into single data table
+  d_ <- rbindlist(d_)
+  
+  d[[x]] <- na.omit(d_)
+}
 
-impact_table_grid_single <- disperseR::create_impact_table_single(
-  data.linked=linked_grids,
-  link.to = 'grids',
-  data.units = unitsrun,
-  map.unitID = "3136-1",
-  map.month = "200511",
-  metric = 'N')
+d <- bind_rows(d)
 
-head(impact_table_zip_single)
+p4s <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m"
+d <- spTransform(
+  SpatialPointsDataFrame(coords = d[, .(lon, lat)],
+                         data = d,
+                         proj4string = CRS( "+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0")),
+  p4s
+)
 
-link_plot_zips <- disperseR::plot_impact_single(
-  data.linked = linked_zips,
-  link.to = 'zips',
-  map.unitID = "3136-1",
-  map.month = "20061",
-  data.units = unitsrun,
-  zcta.dataset = zcta_dataset,
-  metric = 'N',
-  graph.dir = graph_dir,
-  zoom = T, # TRUE by default
-  legend.name = 'HyADS raw exposure',
-  # other parameters passed to ggplot2::theme()
-  axis.text = element_blank(),
-  legend.position = c( .75, .15))
-link_plot_grids <- disperseR::plot_impact_single(
-  data.linked = linked_grids,
-  link.to = 'grids',
-  map.unitID = "3136-1",
-  map.month = "20061",
-  data.units = unitsrun,
-  metric = 'N',
-  graph.dir = graph_dir,
-  zoom = F, # TRUE by default
-  legend.name = 'HyADS raw exposure',
-  # other parameters passed to ggplot2::theme()
-  axis.text = element_blank(),
-  legend.position = c( .75, .15))
-link_plot_counties <- disperseR::plot_impact_single(
-  data.linked = linked_counties,
-  link.to = 'counties',
-  map.unitID = "3136-1",
-  map.month = "20061",
-  counties. = USAboundaries::us_counties( ),
-  data.units = unitsrun,
-  metric = 'N',
-  graph.dir = graph_dir,
-  zoom = T, # TRUE by default
-  legend.name = 'HyADS raw exposure',
-  # other parameters passed to ggplot2::theme()
-  axis.text = element_blank(),
-  legend.position = c( .75, .15))
-
-# the plots take some time to appear in the lower-right window but
-# you should be able to see them
-link_plot_zips
-link_plot_grids
-link_plot_counties
-
+write_rds(d, "particles.rds")
 
