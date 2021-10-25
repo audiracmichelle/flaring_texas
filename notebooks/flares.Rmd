@@ -1,0 +1,349 @@
+# input
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(maps)
+library(gridExtra)
+library(cowplot)
+library(RColorBrewer)
+library(ggthemes)
+library(tidycensus)
+library(leaflet)
+census_api_key('***REMOVED***')
+```
+
+* Read fracking well data
+
+```{r}
+input <- read_csv("../data/tx-tracts-vnf-nightly.csv")
+input %<>%
+  mutate(STATEFP = as.character(STATEFP), 
+         #COUNTYFP = as.character(COUNTYFP), 
+         #TRACTCE = as.character(TRACTCE),
+         GEOID = as.character(GEOID))
+head(input)
+```
+
+```{r}
+dim(input)
+summary(input) 
+```
+
+```{r}
+length(unique(input$GEOID))
+```
+
+```{r}
+length(unique(input$date))
+```
+
+```{r}
+input %>% 
+  group_by(year(date)) %>% 
+  summarise(wells = length(unique(GEOID)), 
+            flares = sum(flares))
+```
+
+```{r}
+sum(input$flares)
+```
+
+* flares ts
+
+```{r}
+input %<>% 
+  mutate(yyyy_mm = format(as.Date(date), "%Y_%m"))
+
+input %>% 
+  group_by(yyyy_mm) %>% 
+  summarise(flares = sum(flares)) %>% 
+ggplot() + 
+  geom_line(aes(x = ym(yyyy_mm), y = flares, color = flares)) +
+  theme_cowplot()
+```
+
+## Explore tracts
+
+```{r}
+states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+head(states_sf)
+crs_ <- st_crs(states_sf)
+```
+
+
+<!-- ```{python} -->
+<!-- import wget -->
+<!-- from zipfile import ZipFile -->
+<!-- import os -->
+
+<!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' -->
+<!-- wget.download(url, os.path.expanduser('~/tmp')) -->
+<!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') -->
+<!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) -->
+<!-- os.system("ls ~/tmp/tl_2016_48_tract/") -->
+<!-- ``` -->
+
+
+```{r}
+tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- tracts_sf %>% 
+  dplyr::filter(STATEFP == "48")
+tracts_sf <- st_transform(tracts_sf, crs_)
+head(tracts_sf)
+```
+
+* flares map
+
+```{r}
+geoid_ <- unique(input$GEOID)
+sum(!geoid_ %in% tracts_sf$GEOID) # <- all GEOIDs in shapefile
+
+tracts_sf %>% 
+  left_join(input %>% 
+              group_by(GEOID) %>% 
+              summarise(flares = sum(flares))) %>% 
+  filter(!is.na(flares)) %>% 
+ggplot() + 
+  geom_sf(data = filter(states_sf, ID == "texas")) + 
+  geom_sf(aes(fill = flares)) +
+  theme_map()
+```
+
+* tract_flares_maps summary
+
+```{r}
+flares_ <- input %>% 
+  group_by(yyyy_mm, GEOID) %>% 
+  summarise(flares = sum(flares)) %>% 
+  pull(flares)
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+sc <- scale_fill_gradientn(colours = myPalette(100), 
+                             limits=c(min(flares_), max(flares_)))
+  
+tract_flares_maps <- list()
+yyyy_mm_ <- sort(unique(input$yyyy_mm))
+#x <- "2020_10"
+for(x in yyyy_mm_) {
+  tract_flares_maps[[x]] <- tracts_sf %>% 
+    left_join(input %>% 
+                filter(yyyy_mm == x) %>% 
+                group_by(GEOID) %>% 
+                summarise(flares = sum(flares))) %>% 
+    filter(!is.na(flares)) %>% 
+    ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) +
+    geom_sf(aes(fill = flares)) + 
+    sc + 
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = x)
+}
+p <- tracts_sf %>% 
+    left_join(input %>% 
+                filter(yyyy_mm == x) %>% 
+                group_by(GEOID) %>% 
+                summarise(flares = sum(flares))) %>% 
+    filter(!is.na(flares)) %>% 
+    ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) +
+    geom_sf(aes(fill = flares)) + 
+    sc
+tract_flares_maps[[1]] <- get_legend(p)
+tract_flares_maps <- marrangeGrob(tract_flares_maps, 
+                           nrow = 4, ncol = 2, 
+                           left = "", top = "Flares per tract per yyyy-mm")
+ggsave("./flares_output/tract_flares_maps.pdf", 
+       tract_flares_maps, width = 15, height = 25, units = "cm")
+```
+
+* flares_per_cap map
+
+```{r}
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+# View(v18)
+
+# Estimate!!Total
+tract_acs <- get_acs(year = 2018,
+                     geography = "tract",
+                     variables = "B01001_001",
+                     state = "TX",
+                     geometry = FALSE)
+tract_acs %<>% 
+  rename(pop = estimate)
+head(tract_acs)
+```
+
+```{r}
+sum(!geoid_ %in% tract_acs$GEOID) # <- all GEOIDs in shapefile
+
+tracts_sf %<>% 
+  left_join(tract_acs %>% 
+              select(GEOID, pop))
+
+tracts_sf %>% 
+  left_join(input %>% 
+              group_by(GEOID) %>% 
+              summarise(flares = sum(flares))
+            ) %>% 
+  filter(!is.na(flares)) %>% 
+  mutate(flares_per_cap = flares / pop) %>% 
+ggplot() + 
+  geom_sf(data = filter(states_sf, ID == "texas")) + 
+  geom_sf(aes(fill = log(flares_per_cap))) +
+  theme_map()
+```
+
+## Explore cbsa (Core Based Statistical Areas)
+
+```{r}
+cbsa <- read_csv("../data/cbsa.csv")
+head(cbsa)
+
+cbsa %<>% 
+  mutate(cbsa = as.character(cbsa), 
+         fips = as.character(fips))
+```
+
+```{r}
+# Estimate!!Total
+county_sf <- get_acs(year = 2018,
+                     geography = "county",
+                     variables = "B01001_001",
+                     state = "TX",
+                     geometry = TRUE)
+
+county_sf %<>% 
+  rename(fips = GEOID, 
+         pop = estimate, 
+         county_name = NAME) %>% 
+  select(fips, county_name, pop)
+
+head(county_sf)
+```
+
+```{r}
+sum(!county_sf$fips %in% cbsa$fips) # <- there are counties that are not port of a cbsa 
+```
+
+```{r}
+cbsa_sf <- county_sf %>% 
+  left_join(cbsa) %>% 
+  mutate(cbsa = if_else(is.na(cbsa), fips, cbsa), 
+         cbsa_name = if_else(is.na(cbsa_name), county_name, cbsa_name)) %>% 
+  group_by(cbsa, cbsa_name) %>% 
+  summarise(pop = sum(pop))
+
+cbsa_sf %>% 
+  st_drop_geometry()
+```
+
+```{r}
+input %<>% 
+  mutate(fips = paste0(STATEFP, COUNTYFP))
+
+unique(input$fips[!input$fips %in% cbsa$fips])
+
+#  [1] "48371" "48177" "48475" "48123" "48033" "48149" "48105" "48507" "48285" "48287" "48109"
+# [12] "48127" "48089" "48165" "48501" "48495" "48173" "48255" "48461" "48311" "48297" "48283"
+# [23] "48383"
+
+input %<>% 
+  left_join(cbsa) %>% 
+  mutate(cbsa = if_else(is.na(cbsa), fips, cbsa), 
+         cbsa_name = if_else(is.na(cbsa), county, cbsa_name))
+
+head(input)
+```
+
+```{r}
+cbsa_sf %<>% 
+  left_join(input %>% 
+              group_by(cbsa) %>% 
+              summarise(flares = sum(flares))) %>% 
+  filter(!is.na(flares)) %>%
+  mutate(flares_per_cap = flares / pop)
+```
+
+```{r}
+map <- cbsa_sf %>% 
+  as("Spatial")
+
+pal <- colorQuantile("Blues", map$flares, n = 10)
+
+leaflet() %>% 
+  leaflet::addProviderTiles(provider = "OpenStreetMap") %>% 
+  addPolygons(data = map, 
+              weight = 0.5, 
+              color = "black",
+              fillColor = pal(map@data$flares), 
+              fillOpacity = 1, 
+              label = ~ cbsa_name)
+```
+
+* flares_per_cap
+
+```{r}
+pal <- colorQuantile("Blues", map$flares_per_cap, n = 10)
+
+leaflet() %>% 
+  leaflet::addProviderTiles(provider = "OpenStreetMap") %>% 
+  addPolygons(data = map, 
+              weight = 0.5, 
+              color = "black",
+              fillColor = pal(map@data$flares_per_cap), 
+              fillOpacity = 1, 
+              label = ~ cbsa_name)
+```
+
+* cbsa_flares_ts summary
+
+```{r}
+input_cbsa <- input %>% 
+  group_by(yyyy_mm, cbsa) %>% 
+  summarise(flares = sum(flares))
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+sc <- scale_color_gradientn(colours = myPalette(100), 
+                             limits=c(min(input_cbsa$flares), 
+                                      max(input_cbsa$flares)))
+
+cbsa_flares_ts <- list()
+cbsa_sf %<>% 
+  arrange(desc(flares_per_cap))
+#i = 1
+for(i in 1:nrow(cbsa_sf)) {
+  cbsa_ <- cbsa_sf$cbsa[i]
+  cbsa_name_ <- cbsa_sf$cbsa_name[i]
+  flares_per_cap_ <- cbsa_sf$flares_per_cap[i]
+  
+  map <- cbsa_sf %>% 
+    filter(cbsa == cbsa_) %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = cbsa_)) + 
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = "flares per cap:", 
+         subtitle = round(flares_per_cap_, digits = 2))
+  
+  ts <- input_cbsa %>% 
+    filter(cbsa == cbsa_) %>% 
+    ggplot() +
+    geom_point(aes(x = ym(yyyy_mm), y = flares, color = flares)) + 
+    geom_line(aes(x = ym(yyyy_mm), y = flares, color = flares)) + 
+    sc + 
+    theme_cowplot() + 
+    xlim(c(min(ym(input_cbsa$yyyy_mm)), max(ym(input_cbsa$yyyy_mm)))) +
+    theme(legend.position = "none") + 
+    labs(title = cbsa_name_, x = "")
+  
+  cbsa_flares_ts[[i]] <- plot_grid(map, ts, ncol = 2, rel_widths = c(0.2, 0.8))
+}
+cbsa_flares_ts <- marrangeGrob(cbsa_flares_ts, 
+                           nrow = 3, ncol = 1, 
+                           left = "", top = "CBSA's sorted by flares per capita")
+ggsave("./flares_output/cbsa_flares_ts.pdf", 
+       cbsa_flares_ts, width = 15, height = 25, units = "cm")
+```
