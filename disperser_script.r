@@ -154,4 +154,4 @@ linked_counties <- disperseR::link_all_units(
 linked_counties %<>% 
   na.omit()
 
-write_rds(linked_counties, "linked_counties.rds")
+write_rds(linked_counties, "./data/linked_counties.rds")
