@@ -10,4 +10,4 @@ docker build -t disperser .
 docker run -p 8787:8787 -e ROOT=true -e DISABLE_AUTH=true -v $(pwd):/home/rstudio/kitematic/ disperser
 ```
 
-In the dockerized connection to Rstudio run [./disperser_script.r](./disperser_script.r)
+In the dockerized connection to Rstudio open [./disperser_script.r](./disperser_script.r)
