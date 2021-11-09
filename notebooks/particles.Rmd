@@ -1,0 +1,412 @@
+---
+output: 
+  html_document:
+    keep_md: true
+---
+
+# particles
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(maps)
+library(gridExtra)
+library(cowplot)
+library(viridis)
+library(RColorBrewer)
+library(ggthemes)
+library(tidycensus)
+library(leaflet)
+census_api_key('ad9a7887ee64724384b5cefd5656ff352288a946')
+```
+
+```{r}
+## Read particles data
+particles <- read_rds("../linked_counties.rds")
+particles %<>%
+  rename(GEOID = geoid, 
+         particles = N) %>% 
+  mutate(year = as.integer(str_sub(month,1, 4)), 
+         month = as.integer(str_sub(month,5, -1)), 
+         date = ymd(sprintf("%04d%02d01", year, month))) %>% 
+  na.omit()
+```
+
+```{r, include=FALSE}
+#### read state shapefile
+states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+crs_ <- st_crs(states_sf)
+```
+
+<!-- ```{python} -->
+<!-- import wget -->
+<!-- from zipfile import ZipFile -->
+<!-- import os -->
+
+<!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' -->
+<!-- wget.download(url, os.path.expanduser('~/tmp')) -->
+<!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') -->
+<!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) -->
+<!-- os.system("ls ~/tmp/tl_2016_48_tract/") -->
+<!-- ``` -->
+
+```{r, include=FALSE}
+#### read tracts shapefile
+tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- tracts_sf %>% 
+  dplyr::filter(STATEFP == "48")
+tracts_sf <- st_transform(tracts_sf, crs_)
+```
+
+```{r, include=FALSE}
+#### get tracts population
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+# View(v18)
+
+# Estimate!!Total
+tract_acs <- get_acs(year = 2018,
+                     geography = "tract",
+                     variables = "B01001_001",
+                     state = "TX",
+                     geometry = FALSE)
+tract_acs %<>% 
+  rename(pop = estimate)
+```
+
+```{r, include=FALSE}
+#### join tracts and flares
+# all particles GEOIDs in shapefile
+# sum(!particles$GEOID %in% tracts_sf$GEOID)
+
+tracts_sf %<>% 
+  left_join(particles %>% 
+              group_by(GEOID) %>% 
+              summarise(tot_particles = sum(particles)))
+```
+
+```{r, include=FALSE}
+#### join tracts and population
+# all shapefile GEOIDs in acs query
+# sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
+
+tracts_sf %<>% 
+  left_join(tract_acs %>% 
+              select(GEOID, pop))
+```
+
+```{r, include=FALSE}
+#### read cbsa data
+cbsa <- read_csv("../data/cbsa.csv")
+
+cbsa %<>% 
+  mutate(cbsa = as.character(cbsa), 
+         fips = as.character(fips))
+```
+
+```{r, include=FALSE}
+#### join tracts_sf and cbsa data
+tracts_sf %<>% 
+  mutate(fips = paste0(STATEFP, COUNTYFP))
+
+# some tracts are not listed in the cbsa file
+#unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips])
+
+tracts_sf %<>% 
+  left_join(cbsa) %>% 
+  mutate(cbsa = if_else(is.na(cbsa), COUNTYFP, cbsa), 
+         cbsa_name = if_else(is.na(cbsa_name), fips, cbsa_name)
+         ) %>% 
+  group_by(cbsa) %>% 
+  mutate(pop_cbsa = sum(pop)) %>% 
+  ungroup()
+```
+
+A total of `r prettyNum(sum(particles$particles), big.mark = ",")` particles were simulated.
+
+A total of `r sprintf('%s', length(unique(particles$GEOID)))` tracts were exposed.
+
+## Total particles per month time series
+
+```{r}
+particles %<>% 
+  mutate(yyyy_mm = format(as.Date(date), "%Y_%m"))
+
+particles %>% 
+  group_by(yyyy_mm) %>% 
+  summarise(particles = sum(particles)) %>% 
+ggplot() + 
+  geom_line(aes(x = ym(yyyy_mm), y = particles, color = particles)) +
+  theme_cowplot() + 
+  labs(title = "Total particles per month", x = "")
+```
+
+## Total particles per tract
+
+Color scheme in deciles.
+
+```{r}
+tot_particles_ <- tracts_sf$tot_particles
+tracts_sf$tot_particles_cut <- cut(tot_particles_, 
+                                quantile(tot_particles_, seq(0,1,.1), na.rm = T), 
+                                include.lowest = T) 
+
+tracts_sf %>%  
+  filter(!is.na(tot_particles)) %>% 
+ggplot() + 
+  geom_sf(data = filter(states_sf, ID == "texas")) + 
+  geom_sf(aes(fill = tot_particles_cut), colour = NA, lwd = 0) + 
+  scale_fill_viridis_d() +
+  theme_map() + 
+  theme(legend.position = "right") + 
+  labs(title = "Total particles per tract")
+```
+
+Continuous gradient
+
+```{r}
+tracts_sf %>%  
+  filter(!is.na(tot_particles)) %>% 
+ggplot() + 
+  geom_sf(data = filter(states_sf, ID == "texas")) + 
+  geom_sf(aes(fill = tot_particles), colour = NA, lwd = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "right") + 
+  labs(title = "Total particles per tract")
+```
+
+<!-- ## Monthly mean flares per tract -->
+
+<!-- ```{r} -->
+<!-- tracts_sf %>%  -->
+<!--   left_join(flares %>%  -->
+<!--               group_by(GEOID, yyyy_mm) %>%  -->
+<!--               summarise(flares = sum(flares, na.rm = T)) %>%  -->
+<!--               group_by(GEOID) %>%  -->
+<!--               summarise(mu_flares = mean(flares, na.rm = T))) %>%  -->
+<!--   filter(!is.na(mu_flares)) %>%  -->
+<!-- ggplot() +  -->
+<!--   geom_sf(data = filter(states_sf, ID == "texas")) +  -->
+<!--   geom_sf(aes(fill = mu_flares), colour = NA, lwd = 0) + -->
+<!--   theme_map() -->
+<!-- ``` -->
+
+```{r, include=FALSE}
+# generate tract_particles_maps.pdf summary
+
+yyyymm_particles_ <- particles %>% 
+  group_by(yyyy_mm, GEOID) %>% 
+  summarise(particles = sum(particles)) %>% 
+  pull(particles)
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+sc <- scale_fill_gradientn(colours = myPalette(100), 
+                             limits=c(min(yyyymm_particles_), max(yyyymm_particles_)))
+  
+tract_particles_maps <- list()
+yyyy_mm_ <- sort(unique(particles$yyyy_mm))
+
+x <- yyyy_mm_[1]
+
+p <- tracts_sf %>% 
+    left_join(particles %>% 
+                filter(yyyy_mm == x) %>% 
+                group_by(GEOID) %>% 
+                summarise(particles = sum(particles))) %>% 
+    filter(!is.na(particles)) %>% 
+    ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) +
+    geom_sf(aes(fill = particles), colour = NA, lwd = 0) + 
+    sc
+tract_particles_maps[[1]] <- get_legend(p)
+
+for(x in yyyy_mm_) {
+  tract_particles_maps[[x]] <- tracts_sf %>% 
+    left_join(particles %>% 
+                filter(yyyy_mm == x) %>% 
+                group_by(GEOID) %>% 
+                summarise(particles = sum(particles))) %>% 
+    filter(!is.na(particles)) %>% 
+    ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) +
+    geom_sf(aes(fill = particles), colour = NA, lwd = 0) + 
+    sc + 
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = x)
+}
+
+tract_particles_maps <- marrangeGrob(tract_particles_maps, 
+                           nrow = 4, ncol = 2, 
+                           left = "", top = "particles per tract in yyyy-mm")
+ggsave("./particles_output/tract_particles_maps.pdf", 
+       tract_particles_maps, width = 15, height = 25, units = "cm")
+```
+
+## Cap exposure to particles
+
+A total of `r prettyNum(sum(tracts_sf$pop[!is.na(tracts_sf$tot_particles)]), big.mark = ",")` people live in tracts where simulated particles dispersed.
+
+In general, tracts with higher number of particles are less populated. 
+
+```{r}
+tracts_sf %>% 
+  filter(!is.na(tot_particles)) %>% 
+ggplot() + 
+  geom_point(aes(x=tot_particles, pop), color = "blue") + 
+  labs(title = "Scatterplot", y = "population", x = "total particles") + 
+  theme_cowplot() + 
+  scale_y_continuous(labels = scales::comma)
+```
+
+```{r}
+tracts_sf %<>% 
+  mutate(tot_particles = if_else(tot_particles < 7500, as.numeric(NA), tot_particles))
+```
+
+Exposed population is considered to be people living in tracks that accumulated more than 7500 particles in a year. A total of `r prettyNum(sum(tracts_sf$pop[!is.na(tracts_sf$tot_particles)]), big.mark = ",")` people were exposed.
+
+```{r}
+tracts_sf %>%
+  filter(!is.na(tot_particles)) %>% 
+  arrange(pop) %>% 
+  mutate(cumsum_pop = cumsum(pop), 
+         cumsum_particles = cumsum(tot_particles)) %>% 
+ggplot() + 
+  geom_point(aes(y=cumsum_particles, x=cumsum_pop), color = "blue", shape = 4) +
+  geom_line(aes(y=cumsum_particles, x=cumsum_pop), size = 0.1) + 
+  labs(y = "accumulated particles", x = "accumulated population") + 
+  theme_cowplot() + 
+  scale_y_continuous(labels = scales::comma) + 
+  scale_x_continuous(labels = scales::comma)
+```
+
+```{r, include=FALSE}
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+sc <- scale_fill_gradientn(colours = myPalette(100), 
+                             limits=c(min(tot_particles_, na.rm = T), 
+                                      max(tot_particles_, na.rm = T)))
+cbsa_ <- tracts_sf %>% 
+  st_drop_geometry() %>% 
+  mutate(exposed = (!is.na(tot_particles)), 
+         exposed_pop = pop * exposed) %>% 
+  group_by(cbsa, cbsa_name, pop_cbsa) %>% 
+  summarise(tot_particles = sum(tot_particles, na.rm = T), 
+            exposed_pop = sum(exposed_pop),
+            n = n(), 
+            exposed = sum(exposed)) %>% 
+  filter(tot_particles > 0) %>%
+  arrange(desc(pop_cbsa))
+
+cbsa_particles_map <- list()
+
+for(i in 1:nrow(cbsa_)) {
+  xx <- tracts_sf %>% 
+    filter(cbsa == cbsa_$cbsa[i])
+  
+  pa1 <- xx %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = tot_particles), colour = NA, lwd = 0) +
+    theme_map() + 
+    theme(legend.position = "left") + 
+    sc + 
+    labs(title = cbsa_$cbsa_name[i], 
+         subtitle = paste("total particles:", 
+                          prettyNum(cbsa_$tot_particles[i], big.mark = ",")),
+         fill = "total\nparticles")
+
+  pa2 <- xx %>% 
+    ggplot() + 
+    geom_sf(aes(fill = tot_particles), colour = NA, lwd = 0) +
+    theme_map() + 
+    theme(legend.position = "none") + 
+    sc  + 
+    labs(subtitle = paste("number of tracts:", 
+                          prettyNum(cbsa_$n[i], big.mark = ","), 
+                          "\nnumber of exposed tracts:", 
+                          prettyNum(cbsa_$exposed[i], big.mark = ",")))
+  
+  pa <- plot_grid(pa1, pa2, ncol = 2)
+
+  pb <- xx %>%  
+    mutate(tot_particles = if_else(is.na(tot_particles), 0, tot_particles)) %>% 
+    arrange(tot_particles, pop) %>% 
+    mutate(cumsum_pop = cumsum(pop), 
+           cumsum_particles = cumsum(tot_particles)) %>% 
+  ggplot() + 
+    geom_point(aes(x=cumsum_pop, y = cumsum_particles), color = "blue", 
+               size = 0.5, shape = 4) + 
+    geom_line(aes(x=cumsum_pop, y = cumsum_particles), size = 0.1) + 
+    theme_cowplot() + 
+    labs(subtitle = paste("total population:", 
+                          prettyNum(cbsa_$pop_cbsa[i], big.mark = ","), 
+                          "\nexposed population:", 
+                          prettyNum(cbsa_$exposed_pop[i], big.mark = ",")), 
+         y = "accumulated particles", 
+         x = "accumulated population") + 
+    scale_y_continuous(labels = scales::label_number(accuracy = 1, big.mark = ',')) + 
+    scale_x_continuous(labels = scales::label_number(accuracy = 1, big.mark = ','))
+  
+  cbsa_particles_map[[i]] <- plot_grid(pa, pb, nrow = 2)
+}
+cbsa_particles_map <- marrangeGrob(cbsa_particles_map, 
+                           nrow = 2, ncol = 1, 
+                           left = "", top = "")
+ggsave("./particles_output/cbsa_particles_map.pdf", 
+       cbsa_particles_map, width = 15, height = 25, units = "cm")
+```
+
+
+<!-- ```{r, include=FALSE} -->
+<!-- flares_cbsa <- flares %>% -->
+<!--   group_by(yyyy_mm, cbsa) %>% -->
+<!--   summarise(flares = sum(flares)) -->
+<!-- myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral"))) -->
+<!-- sc <- scale_color_gradientn(colours = myPalette(100), -->
+<!--                              limits=c(min(flares_cbsa$flares), -->
+<!--                                       max(flares_cbsa$flares))) -->
+
+<!-- cbsa_flares_ts <- list() -->
+<!-- cbsa_sf %<>% -->
+<!--   arrange(desc(flares_per_cap)) -->
+<!-- #i = 1 -->
+<!-- for(i in 1:nrow(cbsa_sf)) { -->
+<!--   cbsa_ <- cbsa_sf$cbsa[i] -->
+<!--   cbsa_name_ <- cbsa_sf$cbsa_name[i] -->
+<!--   flares_per_cap_ <- cbsa_sf$flares_per_cap[i] -->
+
+<!--   map <- cbsa_sf %>% -->
+<!--     filter(cbsa == cbsa_) %>% -->
+<!--     ggplot() + -->
+<!--     geom_sf(data = filter(states_sf, ID == "texas")) + -->
+<!--     geom_sf(aes(fill = cbsa_)) + -->
+<!--     theme_map() + -->
+<!--     theme(legend.position = "none") + -->
+<!--     labs(title = "flares per cap:", -->
+<!--          subtitle = round(flares_per_cap_, digits = 2)) -->
+
+<!--   ts <- flares_cbsa %>% -->
+<!--     filter(cbsa == cbsa_) %>% -->
+<!--     ggplot() + -->
+<!--     geom_point(aes(x = ym(yyyy_mm), y = flares, color = flares)) + -->
+<!--     geom_line(aes(x = ym(yyyy_mm), y = flares, color = flares)) + -->
+<!--     sc + -->
+<!--     theme_cowplot() + -->
+<!--     xlim(c(min(ym(flares_cbsa$yyyy_mm)), max(ym(flares_cbsa$yyyy_mm)))) + -->
+<!--     theme(legend.position = "none") + -->
+<!--     labs(title = cbsa_name_, x = "") -->
+
+<!--   cbsa_flares_ts[[i]] <- plot_grid(map, ts, ncol = 2, rel_widths = c(0.2, 0.8)) -->
+<!-- } -->
+<!-- cbsa_flares_ts <- marrangeGrob(cbsa_flares_ts, -->
+<!--                            nrow = 3, ncol = 1, -->
+<!--                            left = "", top = "CBSA's sorted by flares per capita") -->
+<!-- ggsave("./flares_output/cbsa_flares_ts.pdf", -->
+<!--        cbsa_flares_ts, width = 15, height = 25, units = "cm") -->
+<!-- ``` -->
