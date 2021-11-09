@@ -44,17 +44,17 @@ A total of 5152 tracts were exposed.
 
 ## Total particles per month time series
 
-![](concentration_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
+![](particles_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
 ## Total particles per tract
 
 Color scheme in deciles.
 
-![](concentration_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+![](particles_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
 Continuous gradient
 
-![](concentration_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+![](particles_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
 
 <!-- ## Monthly mean flares per tract -->
 
@@ -80,13 +80,13 @@ A total of 27,455,983 people live in tracts where simulated particles dispersed.
 
 In general, tracts with higher number of particles are less populated. 
 
-![](concentration_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+![](particles_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
 
 
 
 Exposed population is considered to be people living in tracks that accumulated more than 7500 particles in a year. A total of 790,820 people were exposed.
 
-![](concentration_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
+![](particles_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
 
 
 
