@@ -23,7 +23,8 @@ library(RColorBrewer)
 library(ggthemes)
 library(tidycensus)
 library(leaflet)
-census_api_key('ad9a7887ee64724384b5cefd5656ff352288a946')
+#### include your census api key
+#census_api_key('<your_key>')
 ```
 
 ```{r}

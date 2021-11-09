@@ -16,14 +16,11 @@ library(magrittr)
 library(lubridate)
 library(sf)
 library(maps)
-library(gridExtra)
 library(cowplot)
-library(viridis)
-library(RColorBrewer)
-library(ggthemes)
 library(tidycensus)
-library(leaflet)
-census_api_key('ad9a7887ee64724384b5cefd5656ff352288a946')
+library(googlesheets4)
+#### include your census api key
+#census_api_key('<your_key>')
 ```
 
 ```{r}
@@ -195,23 +192,26 @@ tracts_sf %>%
 ```
 
 ```{r, include=FALSE}
-cbsa_ <- tracts_sf %>% 
+fracking_dispersion <- tracts_sf %>% 
   st_drop_geometry() %>% 
-  mutate(exposed_flares = (!is.na(tot_flares)), 
-         exposed_pop_flares = pop * exposed_flares, 
-         exposed_particles = (!is.na(tot_particles)),
-         exposed_pop_particles = pop * exposed_particles) %>% 
+  mutate(exposed_tracts_flares = (!is.na(tot_flares)), 
+         exposed_pop_flares = pop * exposed_tracts_flares, 
+         exposed_tracts_particles = (!is.na(tot_particles)),
+         exposed_pop_particles = pop * exposed_tracts_flares) %>% 
   group_by(cbsa, cbsa_name, pop_cbsa) %>% 
   summarise(tot_flares = sum(tot_flares, na.rm = T), 
             tot_particles = sum(tot_particles, na.rm = T),
             exposed_pop_flares = sum(exposed_pop_flares),
             exposed_pop_particles = sum(exposed_pop_particles),
             n = n(), 
-            exposed_flares = sum(exposed_flares), 
-            exposed_particles = sum(exposed_particles)) %>% 
-  mutate(exposed = exposed_flares + exposed_particles) %>% 
-  filter(exposed > 0) %>% 
+            exposed_tracts_flares = sum(exposed_tracts_flares), 
+            exposed_tracts_particles = sum(exposed_tracts_particles)) %>% 
+  mutate(exposed_tracts = exposed_tracts_flares + exposed_tracts_particles) %>% 
+  filter(exposed_tracts > 0) %>% 
   arrange(desc(pop_cbsa))
 
-write.csv(cbsa_, "cbsa.csv")
+#### write in googlesheets
+# ss <- as_sheets_id("https://docs.google.com/spreadsheets/d/1KAfn6-NqCodkZ62nS4Vo92JnsNLudaRDuOncBw-AQmI/edit?usp=sharing")
+# sheet_write(fracking_dispersion, ss) # <- run if updating the spreadsheet
+# gs4_browse(ss) # <- to browse spreadsheet 
 ```
