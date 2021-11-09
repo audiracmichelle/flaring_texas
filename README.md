@@ -17,5 +17,8 @@ In the dockerized connection to Rstudio open [./disperser_script.r](./disperser_
 Analysis and reports are found in: 
   * [./notebooks/flares.md](./notebooks/flares.md)
   * [./notebooks/particles.md](./notebooks/particles.md)
-  * [./notebooks/flares_output/](./notebooks/flares_output/)
-  * [./notebooks/particles_output/](./notebooks/particles_output/)
+  * [./notebooks/exposure.md](./notebooks/exposure.md)
+  * [./notebooks/flares_output/cbsa_flares_map.pdf](./notebooks/flares_output/cbsa_flares_map.pdf)
+  * [./notebooks/particles_output/cbsa_particles_map.pdf](./notebooks/particles_output/cbsa_particles_map.pdf)
+  * [./notebooks/flares_output/tract_flares_map.pdf](./notebooks/flares_output/tract_flares_map.pdf)
+  * [./notebooks/particles_output/tract_particles_map.pdf](./notebooks/particles_output/tract_particles_map.pdf)
