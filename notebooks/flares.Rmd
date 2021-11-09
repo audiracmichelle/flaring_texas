@@ -22,7 +22,8 @@ library(RColorBrewer)
 library(ggthemes)
 library(tidycensus)
 library(leaflet)
-census_api_key('***REMOVED***')
+#### include your census api key
+#census_api_key('<your_key>')
 ```
 
 ```{r, include=FALSE}
@@ -404,4 +405,3 @@ ggsave("./flares_output/cbsa_flares_map.pdf",
 <!-- ggsave("./flares_output/cbsa_flares_ts.pdf", -->
 <!--        cbsa_flares_ts, width = 15, height = 25, units = "cm") -->
 <!-- ``` -->
-
