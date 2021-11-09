@@ -1,5 +1,7 @@
 # input
 
+This scripts creates the input dataset for our disperseR simulations.
+
 ```{r}
 library(tidyverse)
 library(magrittr)
@@ -11,7 +13,7 @@ library(maps)
 * Read fracking well data
 
 ```{r}
-input <- read_csv("../data/tx-tracts-vnf-nightly.csv")
+input <- read_csv("./tx-tracts-vnf-nightly.csv")
 input %<>%
   mutate(STATEFP = as.character(STATEFP), 
          #COUNTYFP = as.character(COUNTYFP), 
@@ -32,8 +34,21 @@ head(states_sf)
 crs_ <- st_crs(states_sf)
 ```
 
-```{r}
-tracts_sf <- st_read("../data/local/nhgis0026_shapefile_tl2016_us_tract_2016/US_tract_2016.shp")
+<!-- ```{python} -->
+<!-- import wget -->
+<!-- from zipfile import ZipFile -->
+<!-- import os -->
+
+<!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' -->
+<!-- wget.download(url, os.path.expanduser('~/tmp')) -->
+<!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') -->
+<!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) -->
+<!-- os.system("ls ~/tmp/tl_2016_48_tract/") -->
+<!-- ``` -->
+
+```{r, include=FALSE}
+#### read tracts shapefile
+tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp")
 tracts_sf <- tracts_sf %>% 
   dplyr::filter(STATEFP == "48")
 tracts_sf <- st_transform(tracts_sf, crs_)
@@ -84,5 +99,5 @@ head(input)
 ```
 
 ```{r}
-write_rds(input, "../data/input.rds")
+write_rds(input, "./input.rds")
 ```
