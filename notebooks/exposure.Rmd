@@ -1,0 +1,217 @@
+---
+output: 
+  html_document:
+    keep_md: true
+---
+
+# exposure
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(maps)
+library(gridExtra)
+library(cowplot)
+library(viridis)
+library(RColorBrewer)
+library(ggthemes)
+library(tidycensus)
+library(leaflet)
+census_api_key('***REMOVED***')
+```
+
+```{r}
+## Read particles data
+particles <- read_rds("../linked_counties.rds")
+particles %<>%
+  rename(GEOID = geoid, 
+         particles = N) %>% 
+  mutate(year = as.integer(str_sub(month,1, 4)), 
+         month = as.integer(str_sub(month,5, -1)), 
+         date = ymd(sprintf("%04d%02d01", year, month))) %>% 
+  na.omit()
+```
+
+```{r, include=FALSE}
+#### Read fracking well data
+# Filter 2017 to compare with disperseR results
+flares <- read_csv("../data/tx-tracts-vnf-nightly.csv")
+
+flares %<>%
+  mutate(STATEFP = as.character(STATEFP), 
+         #COUNTYFP = as.character(COUNTYFP), 
+         #TRACTCE = as.character(TRACTCE),
+         GEOID = as.character(GEOID), 
+         year = year(date), 
+         month = month(date)) %>% 
+  filter(year == 2017)
+```
+
+```{r, include=FALSE}
+#### read state shapefile
+states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+crs_ <- st_crs(states_sf)
+```
+
+<!-- ```{python} -->
+<!-- import wget -->
+<!-- from zipfile import ZipFile -->
+<!-- import os -->
+
+<!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' -->
+<!-- wget.download(url, os.path.expanduser('~/tmp')) -->
+<!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') -->
+<!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) -->
+<!-- os.system("ls ~/tmp/tl_2016_48_tract/") -->
+<!-- ``` -->
+
+```{r, include=FALSE}
+#### read tracts shapefile
+tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- tracts_sf %>% 
+  dplyr::filter(STATEFP == "48")
+tracts_sf <- st_transform(tracts_sf, crs_)
+```
+
+```{r, include=FALSE}
+#### get tracts population
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+# View(v18)
+
+# Estimate!!Total
+tract_acs <- get_acs(year = 2018,
+                     geography = "tract",
+                     variables = "B01001_001",
+                     state = "TX",
+                     geometry = FALSE)
+tract_acs %<>% 
+  rename(pop = estimate)
+```
+
+```{r, include=FALSE}
+#### join tracts and flares and particles
+# all particles GEOIDs in shapefile
+# sum(!particles$GEOID %in% tracts_sf$GEOID)
+
+tracts_sf %<>% 
+  left_join(particles %>% 
+              group_by(GEOID) %>% 
+              summarise(tot_particles = sum(particles))) %>% 
+  left_join(flares %>% 
+              group_by(GEOID) %>% 
+              summarise(tot_flares = sum(flares)))
+```
+
+```{r, include=FALSE}
+#### join tracts and population
+# all shapefile GEOIDs in acs query
+# sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
+
+tracts_sf %<>% 
+  left_join(tract_acs %>% 
+              select(GEOID, pop))
+```
+
+```{r, include=FALSE}
+#### read cbsa data
+cbsa <- read_csv("../data/cbsa.csv")
+
+cbsa %<>% 
+  mutate(cbsa = as.character(cbsa), 
+         fips = as.character(fips))
+```
+
+```{r, include=FALSE}
+#### join tracts_sf and cbsa data
+tracts_sf %<>% 
+  mutate(fips = paste0(STATEFP, COUNTYFP))
+
+# some tracts are not listed in the cbsa file
+#unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips])
+
+tracts_sf %<>% 
+  left_join(cbsa) %>% 
+  mutate(cbsa = if_else(is.na(cbsa), COUNTYFP, cbsa), 
+         cbsa_name = if_else(is.na(cbsa_name), fips, cbsa_name)
+         ) %>% 
+  group_by(cbsa) %>% 
+  mutate(pop_cbsa = sum(pop)) %>% 
+  ungroup()
+```
+
+## Cap exposure
+
+Exposed population is considered to be people living in tracks that accumulated more than 7500 particles in a year.
+
+```{r}
+tracts_sf %<>% 
+  mutate(tot_particles = if_else(tot_particles < 7500, as.numeric(NA), tot_particles))
+
+normalize <- function(x) {
+    return( (x - min(x, na.rm = TRUE)) / 
+              (max(x, na.rm = TRUE) - min(x, na.rm = TRUE)) )
+}
+
+tracts_sf %<>% 
+  mutate(norm_particles = normalize(tot_particles), 
+         norm_flares = normalize(tot_flares))
+
+tracts_sf %>% 
+  st_drop_geometry() %>% 
+  select(GEOID, norm_particles, norm_flares, pop) %>% 
+  pivot_longer(contains("norm")) %>% 
+  na.omit() %>% 
+ ggplot() + 
+  geom_point(aes(x= value, y= pop, color = name), alpha = 0.5) + 
+  labs(title = "Scatterplot", y = "population", x = "") + 
+  theme_cowplot() + 
+  scale_y_continuous(labels = scales::comma)
+```
+
+```{r}
+tracts_sf %>% 
+  st_drop_geometry() %>% 
+  arrange(pop) %>% 
+  mutate(tot_particles = if_else(is.na(tot_particles),0,tot_particles),
+         tot_flares = if_else(is.na(tot_flares),0,tot_flares),
+         cumsum_pop = cumsum(pop),  
+         cumsum_particles = cumsum(tot_particles) / sum(tot_particles), 
+         cumsum_flares = cumsum(tot_flares) / sum(tot_flares)) %>% 
+   select(GEOID, cumsum_pop, cumsum_particles, cumsum_flares) %>%
+  pivot_longer(c("cumsum_particles", "cumsum_flares")) %>% 
+  na.omit() %>%
+  ggplot() + 
+    geom_point(aes(x=cumsum_pop, y=value, color=name), shape = 4) +
+    geom_line(aes(x=cumsum_pop, y=value, color=name), size = 0.1) + 
+    labs(y = "accumulated parcels/flares", x = "accumulated population") + 
+    theme_cowplot() +  
+    scale_x_continuous(labels = scales::comma)
+```
+
+```{r, include=FALSE}
+cbsa_ <- tracts_sf %>% 
+  st_drop_geometry() %>% 
+  mutate(exposed_flares = (!is.na(tot_flares)), 
+         exposed_pop_flares = pop * exposed_flares, 
+         exposed_particles = (!is.na(tot_particles)),
+         exposed_pop_particles = pop * exposed_particles) %>% 
+  group_by(cbsa, cbsa_name, pop_cbsa) %>% 
+  summarise(tot_flares = sum(tot_flares, na.rm = T), 
+            tot_particles = sum(tot_particles, na.rm = T),
+            exposed_pop_flares = sum(exposed_pop_flares),
+            exposed_pop_particles = sum(exposed_pop_particles),
+            n = n(), 
+            exposed_flares = sum(exposed_flares), 
+            exposed_particles = sum(exposed_particles)) %>% 
+  mutate(exposed = exposed_flares + exposed_particles) %>% 
+  filter(exposed > 0) %>% 
+  arrange(desc(pop_cbsa))
+
+write.csv(cbsa_, "cbsa.csv")
+```
