@@ -11,3 +11,11 @@ docker run -p 8787:8787 -e ROOT=true -e DISABLE_AUTH=true -v $(pwd):/home/rstudi
 ```
 
 In the dockerized connection to Rstudio open [./disperser_script.r](./disperser_script.r)
+
+## Exploring data and disperseR results
+
+Analysis and reports are found in: 
+  * ./notebooks/flares.md
+  * ./notebooks/particles.md
+  * ./notebooks/flares_output/
+  * ./notebooks/particles_output/
