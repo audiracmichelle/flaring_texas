@@ -22,3 +22,4 @@ Analysis and reports are found in:
   * [./notebooks/particles_output/cbsa_particles_map.pdf](./notebooks/particles_output/cbsa_particles_map.pdf)
   * [./notebooks/flares_output/tract_flares_map.pdf](./notebooks/flares_output/tract_flares_map.pdf)
   * [./notebooks/particles_output/tract_particles_map.pdf](./notebooks/particles_output/tract_particles_map.pdf)
+  * google drive sheets summary [https://docs.google.com/spreadsheets/d/1KAfn6-NqCodkZ62nS4Vo92JnsNLudaRDuOncBw-AQmI/edit?usp=sharing](https://docs.google.com/spreadsheets/d/1KAfn6-NqCodkZ62nS4Vo92JnsNLudaRDuOncBw-AQmI/edit?usp=sharing)
