@@ -9,7 +9,7 @@ parser$add_argument("-n", "--n_chunks", default=200,
 parser$add_argument("-c", "--chunk", default=NULL,
                     help="Chunk to be run", type="integer")
 parser$add_argument("-w", "--wkdir", default=NULL,
-                    help="Working directory", type="integer")
+                    help="Working directory", type="character")
 args = parser$parse_args()
 
 # args=list()
