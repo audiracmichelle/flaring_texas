@@ -2,11 +2,10 @@
 #SBATCH -J run_disperser_parallel            # job name
 #SBATCH -N 1                        # number of nodes requested
 #SBATCH -n 1                       # total number of tasks to run in parallel
-#SBATCH -p skx-dev                  # queue (partition) 
+#SBATCH -p skx                  # queue (partition) 
 #SBATCH -t 08:00:00                 # run time (hh:mm:ss) 
 
 module load tacc-singularity
-module load launcher
 
 export LD_PRELOAD=""
 
