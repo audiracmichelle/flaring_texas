@@ -1,5 +1,6 @@
-# fracking_asthma
-Understanding the association of fracking pollution dispersion and asthma outcomes
+# flaring_texas
+
+Texas flaring activity and its dispersion.
 
 ## Running disperseR
 
