@@ -1,9 +1,11 @@
+```
 ssh <user>@stampede2.tacc.utexas.edu
 cd $WORK
 idev
 module list
 module load tacc-singularity
-singularity pull docker://audiracmichelle/geospatial_argparse
-singularity shell geospatial_latest.sif 
-singularity exec geospatial__argparse_latest.sif Rscript --vanilla jobs/extract_pm25.R -r 2013.tif -n 60 -c 59 -o "test/" 
-sbatch jobs/launcher_2014.sh
+singularity pull docker://audiracmichelle/disperser
+singularity shell disperser_latest.sif 
+singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser_parallel_cluster.R -y 2015 -n 200
+#sbatch jobs/launcher.sh
+```
