@@ -2,7 +2,7 @@
 
 This scripts creates the input dataset for our disperseR simulations.
 
-```{r}
+```{r, include = FALSE}
 library(tidyverse)
 library(magrittr)
 library(lubridate)
@@ -18,7 +18,8 @@ input %<>%
   mutate(STATEFP = as.character(STATEFP), 
          #COUNTYFP = as.character(COUNTYFP), 
          #TRACTCE = as.character(TRACTCE),
-         GEOID = as.character(GEOID))
+         GEOID = as.character(GEOID)) %>% 
+  rename(flares_per_day = flares)
 head(input)
 ```
 
@@ -92,12 +93,28 @@ input %<>%
   left_join(centroids_sf %>% 
               st_drop_geometry() %>% 
               select(GEOID, Latitude, Longitude))
-flares <- lapply(input$flares, function(x) floor(seq(6,17,12/x)))
-input$start_hour = flares
+start_hour_ <- lapply(input$flares_per_day, function(x) floor(seq(6,17,12/x)))
+input$start_hour = start_hour_
 input <- unnest(input, cols = c(start_hour))
 head(input)
 ```
 
 ```{r}
+dim(input)
+input %<>% 
+  group_by_all() %>% 
+  summarise(n = n())
+dim(input)
+```
+
+```{r}
 write_rds(input, "./input.rds")
+```
+
+```{r}
+#number of simulations per year
+input %>% 
+  group_by(year(date)) %>% 
+  summarise(n_sim = n(), 
+            n_flares = sum(n))
 ```
