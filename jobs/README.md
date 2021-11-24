@@ -11,3 +11,4 @@ singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser_paral
 #"/work/08317/m1ch3ll3/stampede2/flaring_texas"
 #sbatch jobs/launcher.sh
 ```
+Rscript --vanilla jobs/run_disperser_parallel_cluster.R -y 2016 -n 200 -c 100 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
