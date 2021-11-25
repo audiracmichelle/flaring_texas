@@ -9,7 +9,7 @@ module load tacc-singularity
 
 export LD_PRELOAD=""
 
-srun singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser_parallel_cluster.R -y 2015 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
-srun singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser_parallel_cluster.R -y 2018 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
-srun singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser_parallel_cluster.R -y 2019 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
-srun singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser_parallel_cluster.R -y 2020 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+srun singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser.R -y 2015 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+srun singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser.R -y 2018 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+srun singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser.R -y 2019 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+srun singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser.R -y 2020 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
