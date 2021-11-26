@@ -77,7 +77,7 @@ for(c in 1:(length(chunk_seq) - 1)) {
   
   flag = 1
   iter = 0
-  while(flag > 0 | iter < 100) {
+  while(flag > 0 | iter < 10) {
     hysp_raw <- disperseR::run_disperser_parallel(input.refs = input.refs,
                                                   pbl.height = pbl.height,
                                                   species = species,
