@@ -76,7 +76,8 @@ for(c in 1:(length(chunk_seq) - 1)) {
   input.refs = data.table(input[range,], stringsAsFactors = FALSE)
   
   flag = 1
-  while(flag > 0) {
+  iter = 0
+  while(flag > 0 | iter < 100) {
     hysp_raw <- disperseR::run_disperser_parallel(input.refs = input.refs,
                                                   pbl.height = pbl.height,
                                                   species = species,
@@ -88,5 +89,6 @@ for(c in 1:(length(chunk_seq) - 1)) {
     
     run_log <- unlist(hysp_raw)
     flag <- length(grep("Error", run_log))
+    iter = iter + 1
   }
 }
