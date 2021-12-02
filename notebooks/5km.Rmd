@@ -144,13 +144,10 @@ origin_buffer_sf <- st_as_sf(origin_buffer_sf)
 origin_buffer_sf <- st_transform(origin_buffer_sf, crs=st_crs(origin_sf))
 origin_buffer_sf %<>% 
   cbind(st_drop_geometry(origin_sf))
-```
 
-```{r}
-library(mapview)
-mapview(origin_buffer_sf)
+# library(mapview)
+# mapview(origin_buffer_sf)
 ```
-
 
 ```{r}
 intersection_matrix <- st_intersects(tracts_sf, origin_buffer_sf, sparse = F)
@@ -198,22 +195,22 @@ ggplot() +
        fill = "highest 5%\nin red")
 ```
 
-```{r}
-library(leaflet)
-xx <- tracts_sf %>% 
-  filter(norm_exposure > 80)
+<!-- ```{r} -->
+<!-- library(leaflet) -->
+<!-- xx <- tracts_sf %>%  -->
+<!--   filter(norm_exposure > 80) -->
 
-pal <- colorNumeric(
-  palette = "viridis",
-  domain = xx$norm_exposure)
+<!-- pal <- colorNumeric( -->
+<!--   palette = "viridis", -->
+<!--   domain = xx$norm_exposure) -->
 
-leaflet() %>% 
-  addProviderTiles(providers$OpenStreetMap) %>% 
-  addPolygons(data = xx[,c("norm_exposure", "geometry")], 
-              fillColor = ~pal(xx$norm_exposure), 
-              weight = 0.5,
-              opacity = 0.5,
-              color = "white",
-              dashArray = "3",
-              fillOpacity = 0.7) 
-```
+<!-- leaflet() %>%  -->
+<!--   addProviderTiles(providers$OpenStreetMap) %>%  -->
+<!--   addPolygons(data = xx[,c("norm_exposure", "geometry")],  -->
+<!--               fillColor = ~pal(xx$norm_exposure),  -->
+<!--               weight = 0.5, -->
+<!--               opacity = 0.5, -->
+<!--               color = "white", -->
+<!--               dashArray = "3", -->
+<!--               fillOpacity = 0.7)  -->
+<!-- ``` -->
