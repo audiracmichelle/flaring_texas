@@ -112,9 +112,9 @@ write_rds(input, "./input.rds")
 ```
 
 ```{r}
-#number of simulations per year
+#number of simulations per year-month
 input %>% 
-  group_by(year(date)) %>% 
+  group_by(year(date), month(date)) %>% 
   summarise(n_sim = n(), 
             n_flares = sum(n))
 ```
