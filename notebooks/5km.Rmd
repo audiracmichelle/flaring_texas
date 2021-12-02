@@ -1,0 +1,219 @@
+---
+always_allow_html: true
+output:
+  github_document: default
+---
+
+# flares
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(maps)
+library(gridExtra)
+library(cowplot)
+library(RColorBrewer)
+library(ggthemes)
+library(tidycensus)
+library(viridis)
+library(units)
+#### include your census api key
+#census_api_key('<your_key>', install = TRUE)
+```
+
+```{r, include=FALSE}
+#### Read fracking well data
+# Filter 2017 to compare with disperseR results
+flares <- read_csv("../data/input/tx-tracts-vnf-nightly.csv")
+
+flares %<>%
+  mutate(STATEFP = as.character(STATEFP), 
+         #COUNTYFP = as.character(COUNTYFP), 
+         #TRACTCE = as.character(TRACTCE),
+         GEOID = as.character(GEOID), 
+         year = year(date), 
+         month = month(date)) %>% 
+  filter(year == 2017)
+```
+
+```{r, include=FALSE}
+#### read state shapefile
+states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+crs_ <- st_crs(states_sf)
+```
+
+<!-- ```{python} -->
+<!-- import wget -->
+<!-- from zipfile import ZipFile -->
+<!-- import os -->
+
+<!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' -->
+<!-- wget.download(url, os.path.expanduser('~/tmp')) -->
+<!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') -->
+<!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) -->
+<!-- os.system("ls ~/tmp/tl_2016_48_tract/") -->
+<!-- ``` -->
+
+```{r, include=FALSE}
+#### read tracts shapefile
+tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- tracts_sf %>% 
+  dplyr::filter(STATEFP == "48")
+tracts_sf <- st_transform(tracts_sf, crs_)
+```
+
+```{r, include=FALSE}
+#### get tracts population
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+# View(v18)
+
+# Estimate!!Total
+tract_acs <- get_acs(year = 2018,
+                     geography = "tract",
+                     variables = "B01001_001",
+                     state = "TX",
+                     geometry = FALSE)
+tract_acs %<>% 
+  rename(pop = estimate)
+```
+
+```{r, include=FALSE}
+#### join tracts and flares
+# all flares GEOIDs in shapefile
+# sum(!flares$GEOID %in% tracts_sf$GEOID)
+
+tracts_sf %<>% 
+  left_join(flares %>% 
+              group_by(GEOID) %>% 
+              summarise(tot_flares = sum(flares)))
+```
+
+```{r, include=FALSE}
+#### join tracts and population
+# all shapefile GEOIDs in acs query
+# sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
+
+tracts_sf %<>% 
+  left_join(tract_acs %>% 
+              select(GEOID, pop))
+```
+
+```{r, include=FALSE}
+#### read cbsa data
+cbsa <- read_csv("../data/input/cbsa.csv")
+
+cbsa %<>% 
+  mutate(cbsa = as.character(cbsa), 
+         fips = as.character(fips))
+```
+
+```{r, include=FALSE}
+#### join tracts_sf and cbsa data
+tracts_sf %<>% 
+  mutate(fips = paste0(STATEFP, COUNTYFP))
+
+# some tracts are not listed in the cbsa file
+#unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips])
+
+tracts_sf %<>% 
+  left_join(cbsa) %>% 
+  mutate(cbsa = if_else(is.na(cbsa), COUNTYFP, cbsa), 
+         cbsa_name = if_else(is.na(cbsa_name), fips, cbsa_name)
+         ) %>% 
+  group_by(cbsa) %>% 
+  mutate(pop_cbsa = sum(pop)) %>% 
+  ungroup()
+```
+
+A total of `r prettyNum(sum(flares$flares), big.mark = ",")` flares were reported in 2017.
+
+Flares ocurred in a total of `r sprintf('%s', length(unique(flares$GEOID)))`/
+Exposure is defined as tracts within a buffer of 5km from origin tract.
+
+```{r}
+origin_sf <- tracts_sf %>% 
+  filter(tot_flares > 0)
+origin_buffer_sf <- st_buffer(st_transform(origin_sf$geometry, 29902), set_units(5, km))
+origin_buffer_sf <- st_as_sf(origin_buffer_sf)
+origin_buffer_sf <- st_transform(origin_buffer_sf, crs=st_crs(origin_sf))
+origin_buffer_sf %<>% 
+  cbind(st_drop_geometry(origin_sf))
+```
+
+```{r}
+library(mapview)
+mapview(origin_buffer_sf)
+```
+
+
+```{r}
+intersection_matrix <- st_intersects(tracts_sf, origin_buffer_sf, sparse = F)
+flares_array <- origin_sf$tot_flares
+tracts_sf$tot_exposure <- intersection_matrix %*% flares_array
+tracts_sf$tot_exposure[tracts_sf$tot_exposure == 0] <- NA
+```
+
+## Total exposure to flares per tract
+
+```{r}
+summary(tracts_sf$tot_exposure)
+```
+
+
+## Total exposure to flares per tract area normalized
+
+* flares per sq km summary
+
+```{r}
+tracts_sf %<>% 
+  mutate(norm_exposure = tot_exposure / ALAND * 1e6) #ALAND in tiger filers is reported in sq meters
+
+summary(tracts_sf$norm_exposure)
+```
+
+* highest 5% in red
+
+```{r}
+x_sf <- tracts_sf
+x_sf$fill_var <-  st_drop_geometry(x_sf) %>% pull("norm_exposure")
+q95 <- quantile(x_sf$fill_var, probs = .95, na.rm = TRUE)
+x_sf_ <- x_sf[x_sf$fill_var > q95,] %>%  
+  filter(!is.na(fill_var))
+x_sf <- x_sf[x_sf$fill_var <= q95,] %>%  
+  filter(!is.na(fill_var))
+
+ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(data = x_sf_, fill = "red", colour = "red") + 
+    geom_sf(data = x_sf, aes(fill = fill_var), colour = NA, lwd = 0) +
+  scale_fill_viridis_c(trans = "sqrt") +
+  theme_map() + 
+  labs(title = "Total flares per tract area normalized", 
+       fill = "highest 5%\nin red")
+```
+
+```{r}
+library(leaflet)
+xx <- tracts_sf %>% 
+  filter(norm_exposure > 80)
+
+pal <- colorNumeric(
+  palette = "viridis",
+  domain = xx$norm_exposure)
+
+leaflet() %>% 
+  addProviderTiles(providers$OpenStreetMap) %>% 
+  addPolygons(data = xx[,c("norm_exposure", "geometry")], 
+              fillColor = ~pal(xx$norm_exposure), 
+              weight = 0.5,
+              opacity = 0.5,
+              color = "white",
+              dashArray = "3",
+              fillOpacity = 0.7) 
+```
