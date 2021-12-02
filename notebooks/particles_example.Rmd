@@ -1,3 +1,8 @@
+---
+output: 
+  html_document:
+    keep_md: true
+---
 
 ```{r}
 library(tidyverse)
@@ -5,7 +10,7 @@ library(magrittr)
 library(sf)
 library(USAboundariesData)
 
-particles <- read_rds("../data/particles.rds")
+particles <- read_rds("../data/input/particles.rds")
 particles <- st_as_sf(particles)
 class(particles)
 ```
@@ -128,3 +133,25 @@ p[[x]] <- ggplot() +
 }
 p
 ```
+
+## Distance after 12 hours
+
+```{r}
+lat <- mean(particles$lat[particles$hour == 1])
+lon <- mean(particles$lon[particles$hour == 1])
+origin <- data.frame(lat = lat, lon = lon)
+origin <- st_as_sf(origin,
+                   coords = c("lat","lon"), 
+                   crs = st_crs(particles))
+
+dist_travelled <- st_distance(x = particles[particles$hour == 12,], 
+            y = origin, 
+            by_element = TRUE)
+dist_travelled <- dist_travelled / 1000
+summary(dist_travelled)
+```
+
+```{r}
+hist(dist_travelled)
+```
+
