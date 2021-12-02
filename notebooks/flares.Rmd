@@ -21,15 +21,15 @@ library(cowplot)
 library(RColorBrewer)
 library(ggthemes)
 library(tidycensus)
-library(leaflet)
+library(viridis)
 #### include your census api key
-#census_api_key('<your_key>')
+#census_api_key('<your_key>', install = TRUE)
 ```
 
 ```{r, include=FALSE}
 #### Read fracking well data
 # Filter 2017 to compare with disperseR results
-flares <- read_csv("../data/tx-tracts-vnf-nightly.csv")
+flares <- read_csv("../data/input/tx-tracts-vnf-nightly.csv")
 
 flares %<>%
   mutate(STATEFP = as.character(STATEFP), 
@@ -105,7 +105,7 @@ tracts_sf %<>%
 
 ```{r, include=FALSE}
 #### read cbsa data
-cbsa <- read_csv("../data/cbsa.csv")
+cbsa <- read_csv("../data/input/cbsa.csv")
 
 cbsa %<>% 
   mutate(cbsa = as.character(cbsa), 
@@ -151,10 +151,16 @@ ggplot() +
 
 ## Total flares per tract
 
-Color scheme in deciles.
+* total flares summary
 
 ```{r}
 tot_flares_ <- tracts_sf$tot_flares
+summary(tot_flares_)
+```
+
+* Color scheme in deciles.
+
+```{r}
 tracts_sf$tot_flares_cut <- cut(tot_flares_, 
                                 quantile(tot_flares_, seq(0,1,.1), na.rm = T), 
                                 include.lowest = T) 
@@ -170,71 +176,148 @@ ggplot() +
   labs(title = "Total flares per tract")
 ```
 
-<!-- ## Monthly mean flares per tract -->
+## Total flares per tract area normalized
 
-<!-- ```{r} -->
-<!-- tracts_sf %>%  -->
-<!--   left_join(flares %>%  -->
-<!--               group_by(GEOID, yyyy_mm) %>%  -->
-<!--               summarise(flares = sum(flares, na.rm = T)) %>%  -->
-<!--               group_by(GEOID) %>%  -->
-<!--               summarise(mu_flares = mean(flares, na.rm = T))) %>%  -->
-<!--   filter(!is.na(mu_flares)) %>%  -->
-<!-- ggplot() +  -->
-<!--   geom_sf(data = filter(states_sf, ID == "texas")) +  -->
-<!--   geom_sf(aes(fill = mu_flares), colour = NA, lwd = 0) + -->
-<!--   theme_map() -->
-<!-- ``` -->
+* flares per sq km summary
+
+```{r}
+tracts_sf %<>% 
+  mutate(norm_flares = tot_flares / ALAND * 1e6) #ALAND in tiger filers is reported in sq meters
+
+summary(tracts_sf$norm_flares)
+```
+
+* highest 5% in red
+
+```{r}
+x_sf <- tracts_sf
+x_sf$fill_var <-  st_drop_geometry(x_sf) %>% pull("norm_flares")
+q95 <- quantile(x_sf$fill_var, probs = .95, na.rm = TRUE)
+x_sf_ <- x_sf[x_sf$fill_var > q95,] %>%  
+  filter(!is.na(fill_var))
+x_sf <- x_sf[x_sf$fill_var <= q95,] %>%  
+  filter(!is.na(fill_var))
+
+ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(data = x_sf_, fill = "red", colour = "red") + 
+    geom_sf(data = x_sf, aes(fill = fill_var), colour = NA, lwd = 0) +
+  scale_fill_viridis_c(trans = "sqrt") +
+  theme_map() + 
+  labs(title = "Total flares per tract area normalized", 
+       fill = "highest 5%\nin red")
+```
+
+## Monthly flares per tract area normalized
+
+* summary
+
+```{r}
+flares %<>% 
+  left_join(tracts_sf %>% 
+              st_drop_geometry() %>% 
+              select(GEOID, ALAND))
+
+flares %<>% 
+  group_by(yyyy_mm, GEOID, ALAND) %>% 
+  mutate(GEOID_month_tot_flares = sum(flares), 
+         GEOID_month_norm_flares = GEOID_month_tot_flares / ALAND * 1e6)
+
+summary(flares$GEOID_month_norm_flares)
+```
 
 ```{r, include=FALSE}
 # generate tract_flares_maps.pdf summary
-
-yyyymm_flares_ <- flares %>% 
-  group_by(yyyy_mm, GEOID) %>% 
-  summarise(flares = sum(flares)) %>% 
-  pull(flares)
+xx <- flares
+xx$fill_var <- xx$GEOID_month_norm_flares
+q95 <- quantile(xx$fill_var, probs = .95, na.rm = TRUE)
+xx_ <- xx[xx$fill_var > q95,]
+xx <- xx[xx$fill_var <= q95,]
 myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
 sc <- scale_fill_gradientn(colours = myPalette(100), 
-                             limits=c(min(yyyymm_flares_), max(yyyymm_flares_)))
+                             limits=c(min(xx$fill_var), max(xx$fill_var)))
   
 tract_flares_maps <- list()
 yyyy_mm_ <- sort(unique(flares$yyyy_mm))
 
-x <- yyyy_mm_[1]
+y <- yyyy_mm_[1]
+x_sf <- tracts_sf %>% 
+    left_join(xx %>% 
+                filter(yyyy_mm == y)) %>% 
+    filter(!is.na(fill_var))
+x_sf_ <- tracts_sf %>% 
+    left_join(xx_ %>% 
+                filter(yyyy_mm == y)) %>% 
+    filter(!is.na(fill_var))
 
-p <- tracts_sf %>% 
-    left_join(flares %>% 
-                filter(yyyy_mm == x) %>% 
-                group_by(GEOID) %>% 
-                summarise(flares = sum(flares))) %>% 
-    filter(!is.na(flares)) %>% 
-    ggplot() +
-    geom_sf(data = filter(states_sf, ID == "texas")) +
-    geom_sf(aes(fill = flares), colour = NA, lwd = 0) + 
-    sc
+p <- ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(data = x_sf_, fill = "black", colour = "black") + 
+    geom_sf(data = x_sf, aes(fill = fill_var), colour = NA, lwd = 0) + 
+    sc + 
+  labs(fill = "highest 5%\nin black")
 tract_flares_maps[[1]] <- get_legend(p)
 
-for(x in yyyy_mm_) {
-  tract_flares_maps[[x]] <- tracts_sf %>% 
-    left_join(flares %>% 
-                filter(yyyy_mm == x) %>% 
-                group_by(GEOID) %>% 
-                summarise(flares = sum(flares))) %>% 
-    filter(!is.na(flares)) %>% 
-    ggplot() +
-    geom_sf(data = filter(states_sf, ID == "texas")) +
-    geom_sf(aes(fill = flares), colour = NA, lwd = 0) + 
+for(y in yyyy_mm_) {
+  x_sf <- tracts_sf %>% 
+    left_join(xx %>% 
+                filter(yyyy_mm == y)) %>% 
+    filter(!is.na(fill_var))
+  
+  x_sf_ <- tracts_sf %>% 
+    left_join(xx_ %>% 
+                filter(yyyy_mm == y)) %>% 
+    filter(!is.na(fill_var))
+  
+    tract_flares_maps[[y]] <- ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(data = x_sf_, fill = "black", colour = "black") + 
+    geom_sf(data = x_sf, aes(fill = fill_var), colour = NA, lwd = 0) + 
     sc + 
     theme_map() +
     theme(legend.position = "none") + 
-    labs(title = x)
+    labs(title = y)
 }
 
 tract_flares_maps <- marrangeGrob(tract_flares_maps, 
                            nrow = 4, ncol = 2, 
-                           left = "", top = "Flares per tract in yyyy-mm")
+                           left = "", top = "Area normalized flares per tract in yyyy-mm")
 ggsave("./flares_output/tract_flares_maps.pdf", 
        tract_flares_maps, width = 15, height = 25, units = "cm")
+```
+
+## Monthly mean flares per tract area summarised
+
+* summary
+
+```{r}
+tracts_sf %<>% 
+  left_join(flares %>% 
+              group_by(GEOID) %>% 
+              summarise(mu_norm_flares = mean(GEOID_month_norm_flares))
+            )
+
+summary(tracts_sf$mu_norm_flares)
+```
+
+
+```{r}
+x_sf <- tracts_sf
+x_sf$fill_var <-  st_drop_geometry(x_sf) %>% pull("mu_norm_flares")
+q95 <- quantile(x_sf$fill_var, probs = .95, na.rm = TRUE)
+x_sf_ <- x_sf[x_sf$fill_var > q95,] %>%  
+  filter(!is.na(fill_var))
+x_sf <- x_sf[x_sf$fill_var <= q95,] %>%  
+  filter(!is.na(fill_var))
+
+ggplot() +
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(data = x_sf_, fill = "red", colour = "red") + 
+    geom_sf(data = x_sf, aes(fill = fill_var), colour = NA, lwd = 0) +
+  scale_fill_viridis_c(trans = "sqrt") +
+  theme_map() + 
+  labs(title = "Mean of monthly flares per tract area normalized", 
+       fill = "highest 5%\nin red")
 ```
 
 ## Cap exposure to flares
@@ -280,12 +363,27 @@ ggplot() +
 <!--   geom_line(aes(x=cumsum_flares, cumsum_pop)) -->
 <!-- ``` -->
 
-
 ```{r, include=FALSE}
+# generate cbsa_flares_map.pdf summary
+flares %<>% 
+  mutate(fips = paste0(STATEFP, COUNTYFP)) %>% 
+  left_join(cbsa)  %>% 
+  mutate(cbsa = if_else(is.na(cbsa), COUNTYFP, cbsa), 
+         cbsa_name = if_else(is.na(cbsa_name), fips, cbsa_name)
+         )
+
+x_sf <- tracts_sf
+x_sf$fill_var <-  st_drop_geometry(x_sf) %>% pull("norm_flares")
+q95 <- quantile(x_sf$fill_var, probs = .95, na.rm = TRUE)
+x_sf_ <- x_sf[x_sf$fill_var > q95,] %>%  
+  filter(!is.na(fill_var))
+x_sf <- x_sf[x_sf$fill_var <= q95,] %>%  
+  filter(!is.na(fill_var))
+
 myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
 sc <- scale_fill_gradientn(colours = myPalette(100), 
-                             limits=c(min(tot_flares_, na.rm = T), 
-                                      max(tot_flares_, na.rm = T)))
+                             limits=c(min(x_sf$norm_flares, na.rm = T), 
+                                      max(x_sf$norm_flares, na.rm = T)))
 cbsa_ <- tracts_sf %>% 
   st_drop_geometry() %>% 
   mutate(exposed = (!is.na(tot_flares)), 
@@ -303,22 +401,24 @@ cbsa_flares_map <- list()
 for(i in 1:nrow(cbsa_)) {
   xx <- tracts_sf %>% 
     filter(cbsa == cbsa_$cbsa[i])
+  yy <- flares %>% 
+    filter(cbsa == cbsa_$cbsa[i])
   
   pa1 <- xx %>% 
     ggplot() + 
     geom_sf(data = filter(states_sf, ID == "texas")) + 
-    geom_sf(aes(fill = tot_flares), colour = NA, lwd = 0) +
+    geom_sf(aes(fill = norm_flares), colour = NA, lwd = 0) +
     theme_map() + 
     theme(legend.position = "left") + 
     sc + 
     labs(title = cbsa_$cbsa_name[i], 
          subtitle = paste("total flares:", 
                           prettyNum(cbsa_$tot_flares[i], big.mark = ",")),
-         fill = "total\nflares")
+         fill = "total\nflares\narea\nnormalized")
 
   pa2 <- xx %>% 
     ggplot() + 
-    geom_sf(aes(fill = tot_flares), colour = NA, lwd = 0) +
+    geom_sf(aes(fill = norm_flares), colour = NA, lwd = 0) +
     theme_map() + 
     theme(legend.position = "none") + 
     sc  + 
@@ -328,25 +428,33 @@ for(i in 1:nrow(cbsa_)) {
                           prettyNum(cbsa_$exposed[i], big.mark = ",")))
   
   pa <- plot_grid(pa1, pa2, ncol = 2)
-
-  pb <- xx %>%  
-    mutate(tot_flares = if_else(is.na(tot_flares), 0, tot_flares)) %>% 
-    arrange(tot_flares, pop) %>% 
-    mutate(cumsum_pop = cumsum(pop), 
-           cumsum_flares = cumsum(tot_flares)) %>% 
-  ggplot() + 
-    geom_point(aes(x=cumsum_pop, y = cumsum_flares), color = "blue", 
-               size = 0.5, shape = 4) + 
-    geom_line(aes(x=cumsum_pop, y = cumsum_flares), size = 0.1) + 
+  
+  pb <- yy %>%  
+    group_by(yyyy_mm) %>% 
+    summarise(flares = sum(flares)) %>% 
+    ggplot() + 
+    geom_line(aes(x = ym(yyyy_mm), y = flares, color = flares)) + 
     theme_cowplot() + 
-    labs(subtitle = paste("total population:", 
-                          prettyNum(cbsa_$pop_cbsa[i], big.mark = ","), 
-                          "\nexposed population:", 
-                          prettyNum(cbsa_$exposed_pop[i], big.mark = ",")), 
-         y = "accumulated flares", 
-         x = "accumulated population") + 
-    scale_y_continuous(labels = scales::label_number(accuracy = 1, big.mark = ',')) + 
-    scale_x_continuous(labels = scales::label_number(accuracy = 1, big.mark = ','))
+    labs(title = "Total flares per month", x = "")
+    
+  # pb <- xx %>%  
+  #   mutate(tot_flares = if_else(is.na(tot_flares), 0, tot_flares)) %>% 
+  #   arrange(tot_flares, pop) %>% 
+  #   mutate(cumsum_pop = cumsum(pop), 
+  #          cumsum_flares = cumsum(tot_flares)) %>% 
+  # ggplot() + 
+  #   geom_point(aes(x=cumsum_pop, y = cumsum_flares), color = "blue", 
+  #              size = 0.5, shape = 4) + 
+  #   geom_line(aes(x=cumsum_pop, y = cumsum_flares), size = 0.1) + 
+  #   theme_cowplot() + 
+  #   labs(subtitle = paste("total population:", 
+  #                         prettyNum(cbsa_$pop_cbsa[i], big.mark = ","), 
+  #                         "\nexposed population:", 
+  #                         prettyNum(cbsa_$exposed_pop[i], big.mark = ",")), 
+  #        y = "accumulated flares", 
+  #        x = "accumulated population") + 
+  #   scale_y_continuous(labels = scales::label_number(accuracy = 1, big.mark = ',')) + 
+  #   scale_x_continuous(labels = scales::label_number(accuracy = 1, big.mark = ','))
   
   cbsa_flares_map[[i]] <- plot_grid(pa, pb, nrow = 2)
 }

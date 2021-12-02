@@ -48,27 +48,64 @@ A total of 61 tracts were exposed.
 
 ## Total flares per tract
 
-Color scheme in deciles.
-
-![](flares_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
-
-<!-- ## Monthly mean flares per tract -->
-
-<!-- ```{r} -->
-<!-- tracts_sf %>%  -->
-<!--   left_join(flares %>%  -->
-<!--               group_by(GEOID, yyyy_mm) %>%  -->
-<!--               summarise(flares = sum(flares, na.rm = T)) %>%  -->
-<!--               group_by(GEOID) %>%  -->
-<!--               summarise(mu_flares = mean(flares, na.rm = T))) %>%  -->
-<!--   filter(!is.na(mu_flares)) %>%  -->
-<!-- ggplot() +  -->
-<!--   geom_sf(data = filter(states_sf, ID == "texas")) +  -->
-<!--   geom_sf(aes(fill = mu_flares), colour = NA, lwd = 0) + -->
-<!--   theme_map() -->
-<!-- ``` -->
+* total flares summary
 
 
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+##     1.0    17.0    75.0   292.9   241.0  3973.0    5204
+```
+
+* Color scheme in deciles.
+
+![](flares_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+
+## Total flares per tract area normalized
+
+* flares per sq km summary
+
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+##   0.001   0.026   0.085   0.179   0.186   1.889    5204
+```
+
+* highest 5% in red
+
+![](flares_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+
+## Monthly flares per tract area normalized
+
+* summary
+
+
+```
+## Joining, by = "GEOID"
+```
+
+```
+##      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+## 0.0001134 0.0092148 0.0167659 0.0352295 0.0379501 0.8634279
+```
+
+
+
+## Monthly mean flares per tract area summarised
+
+* summary
+
+
+```
+## Joining, by = "GEOID"
+```
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+##   0.001   0.006   0.012   0.038   0.024   0.863    5204
+```
+
+
+![](flares_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
 
 ## Cap exposure to flares
 
@@ -76,9 +113,9 @@ A total of 259,948 people live in tracts where flares events occurred.
 
 In general, tracts with higher number of flares are less populated. 
 
-![](flares_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+![](flares_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
 
-![](flares_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+![](flares_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
 
 
 <!-- ```{r} -->
@@ -91,7 +128,6 @@ In general, tracts with higher number of flares are less populated.
 <!--   geom_point(aes(x=cumsum_flares, cumsum_pop, color = cbsa_name)) + -->
 <!--   geom_line(aes(x=cumsum_flares, cumsum_pop)) -->
 <!-- ``` -->
-
 
 
 
@@ -143,4 +179,3 @@ In general, tracts with higher number of flares are less populated.
 <!-- ggsave("./flares_output/cbsa_flares_ts.pdf", -->
 <!--        cbsa_flares_ts, width = 15, height = 25, units = "cm") -->
 <!-- ``` -->
-
