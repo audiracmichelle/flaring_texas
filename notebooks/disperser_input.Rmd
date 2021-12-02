@@ -1,4 +1,10 @@
-# input
+---
+output: 
+  html_document:
+    keep_md: true
+---
+
+# disperser_input
 
 This scripts creates the input dataset for our disperseR simulations.
 
@@ -13,7 +19,7 @@ library(maps)
 * Read fracking well data
 
 ```{r}
-input <- read_csv("./tx-tracts-vnf-nightly.csv")
+input <- read_csv("../data/input/tx-tracts-vnf-nightly.csv")
 input %<>%
   mutate(STATEFP = as.character(STATEFP), 
          #COUNTYFP = as.character(COUNTYFP), 
@@ -108,7 +114,7 @@ dim(input)
 ```
 
 ```{r}
-write_rds(input, "./input.rds")
+write_rds(input, "../data/input/input.rds")
 ```
 
 ```{r}
