@@ -15,7 +15,7 @@ In the dockerized connection to Rstudio open [./disperser_script.r](./disperser_
 
 ## Exploring data and disperseR results
 
-Analysis and reports are found in: 
+**Notebooks**
   * [./notebooks/particles_example.md](./notebooks/particles_example.md)
        + A single emission example of dispersion
        + Example of distance traveled after 12 hours  
@@ -25,10 +25,12 @@ Analysis and reports are found in:
        + Analysis of flaring-origin air parcels dispersion
   * [./notebooks/exposure.md](./notebooks/exposure.md)
        + Population exposure comparison between --flaring events per tract criteria-- vs --flaring-origin air parcels dispersion criteria--
+ 
+ **Reports**
   * CBSA reports:
        + [./notebooks/flares_output/cbsa_flares_map.pdf](./notebooks/flares_output/cbsa_flares_map.pdf)
        + [./notebooks/particles_output/cbsa_particles_map.pdf](./notebooks/particles_output/cbsa_particles_map.pdf)
-  * Per month dispersion viz:
+  * Per month dispersion viz reports:
        + [./notebooks/flares_output/tract_flares_map.pdf](https://github.com/audiracmichelle/flaring_texas/blob/main/notebooks/flares_output/tract_flares_maps.pdf)
        + [./notebooks/particles_output/tract_particles_map.pdf](https://github.com/audiracmichelle/flaring_texas/blob/main/notebooks/particles_output/tract_particles_maps.pdf)
   * google drive sheets summary:
