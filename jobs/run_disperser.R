@@ -13,9 +13,9 @@ parser$add_argument("-w", "--wkdir", default=NULL,
 args = parser$parse_args()
 
 # args=list()
-# args$year = as.integer(2016)
-# args$n_chunks = as.integer(100)
-# args$chunk = NULL
+# args$year = as.integer(2015)
+# args$n_chunks = as.integer(1000)
+# args$chunk = as.integer(250)
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
 #### 
@@ -95,7 +95,7 @@ for(c in 1:(length(chunk_seq) - 1)) {
   
   if(flag > 0) {
     system(paste0("echo ", 
-                  paste(run_log[grep("Error", run_log)], collapse = T), 
+                  paste(run_log[grep("Error", run_log)], collapse = ''), 
                   " > ", 
                   args$year, 
                   "_", 
@@ -110,7 +110,7 @@ for(c in 1:(length(chunk_seq) - 1)) {
 }
 
 system(paste0("echo ", 
-              paste(flags, collapse = T), 
+              paste(flags, collapse = ''), 
               " > flags_",
               args$year, 
               ".txt")
