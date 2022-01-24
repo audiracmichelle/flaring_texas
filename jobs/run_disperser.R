@@ -14,8 +14,8 @@ args = parser$parse_args()
 
 # args=list()
 # args$year = as.integer(2016)
-# args$n_chunks = as.integer(1000)
-# args$chunk = as.integer(500)
+# args$n_chunks = as.integer(100)
+# args$chunk = NULL
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
 #### 
@@ -71,13 +71,14 @@ npart = 100
 keep.hysplit.files = FALSE ## FALSE BY DEFAULT
 mc.cores = parallel::detectCores()
 
+flags = c()
 for(c in 1:(length(chunk_seq) - 1)) {
   range = seq(chunk_seq[c] + 1, chunk_seq[c+1])
   input.refs = data.table(input[range,], stringsAsFactors = FALSE)
   
   flag = 1
   iter = 0
-  while(flag > 0 | iter < 10) {
+  while(flag > 0 | iter < 3) {
     hysp_raw <- disperseR::run_disperser_parallel(input.refs = input.refs,
                                                   pbl.height = pbl.height,
                                                   species = species,
@@ -91,4 +92,26 @@ for(c in 1:(length(chunk_seq) - 1)) {
     flag <- length(grep("Error", run_log))
     iter = iter + 1
   }
+  
+  if(flag > 0) {
+    system(paste0("echo ", 
+                  paste(run_log[grep("Error", run_log)], collapse = T), 
+                  " > ", 
+                  args$year, 
+                  "_", 
+                  c, 
+                  "_", 
+                  flag, 
+                  ".txt")
+           )
+  }
+  
+  flags = c(flags, flag)
 }
+
+system(paste0("echo ", 
+              paste(flags, collapse = T), 
+              " > flags_",
+              args$year, 
+              ".txt")
+)
