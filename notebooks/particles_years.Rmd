@@ -1,0 +1,201 @@
+---
+output: 
+  html_document:
+    keep_md: true
+---
+
+# particles
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(maps)
+library(gridExtra)
+library(cowplot)
+library(viridis)
+library(RColorBrewer)
+library(ggthemes)
+library(tidycensus)
+library(leaflet)
+#### include your census api key
+#census_api_key('<your_key>')
+```
+
+```{r}
+## Read particles data
+particles_months <- read_rds("../data/output/linked_counties.rds")
+particles_months %<>%
+  rename(GEOID = geoid, 
+         density = N) %>% 
+  mutate(year = as.integer(str_sub(month,1, 4)), 
+         month = as.integer(str_sub(month,5, -1)), 
+         date = ymd(sprintf("%04d%02d01", year, month))) %>% 
+  na.omit()
+```
+
+```{r, include=FALSE}
+#### read state shapefile
+states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+crs_ <- st_crs(states_sf)
+```
+
+<!-- ```{python} -->
+<!-- import wget -->
+<!-- from zipfile import ZipFile -->
+<!-- import os -->
+
+<!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' -->
+<!-- wget.download(url, os.path.expanduser('~/tmp')) -->
+<!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') -->
+<!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) -->
+<!-- os.system("ls ~/tmp/tl_2016_48_tract/") -->
+<!-- ``` -->
+
+```{r, include=FALSE}
+#### read tracts shapefile
+tracts_sf <- st_read("../data/input/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- tracts_sf %>% 
+  dplyr::filter(STATEFP == "48") %>% 
+  mutate(area = ALAND / 1e6) #ALAND in tiger filers is reported in sq meters
+tracts_sf <- st_transform(tracts_sf, crs_)
+```
+
+```{r, include=FALSE}
+#### get tracts population
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+# View(v18)
+
+# Estimate!!Total
+tract_acs <- get_acs(year = 2018,
+                     geography = "tract",
+                     variables = "B01001_001",
+                     state = "TX",
+                     geometry = FALSE)
+tract_acs %<>% 
+  rename(pop = estimate)
+```
+
+```{r, include=FALSE}
+#### join tracts and flares
+# all particles GEOIDs in shapefile
+# sum(!particles$GEOID %in% tracts_sf$GEOID)
+
+tracts_sf %<>% 
+  left_join(particles_months %>% 
+              group_by(GEOID) %>% 
+              summarise(tot_density = sum(density)))
+```
+
+```{r, include=FALSE}
+#### join tracts and population
+# all shapefile GEOIDs in acs query
+# sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
+
+tracts_sf %<>% 
+  left_join(tract_acs %>% 
+              select(GEOID, pop))
+```
+
+```{r, include=FALSE}
+#### read cbsa data
+cbsa <- read_csv("../data/input/cbsa.csv")
+
+cbsa %<>% 
+  mutate(cbsa = as.character(cbsa), 
+         fips = as.character(fips))
+```
+
+```{r, include=FALSE}
+#### join tracts_sf and cbsa data
+tracts_sf %<>% 
+  mutate(fips = paste0(STATEFP, COUNTYFP))
+
+# some tracts are not listed in the cbsa file
+#unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips])
+
+tracts_sf %<>% 
+  left_join(cbsa) %>% 
+  mutate(cbsa = if_else(is.na(cbsa), COUNTYFP, cbsa), 
+         cbsa_name = if_else(is.na(cbsa_name), fips, cbsa_name)
+         ) %>% 
+  group_by(cbsa) %>% 
+  mutate(pop_cbsa = sum(pop)) %>% 
+  ungroup()
+```
+
+## Wind concentration and exposure
+
+```{r}
+# recover population and area from tracts and add to particles data
+particles_months %<>%
+  left_join(
+    tracts_sf %>% 
+      st_drop_geometry() %>% 
+      select(GEOID, pop, area)
+    ) %>% 
+  filter(area > 0 )
+```
+
+```{r}
+# define flares_years
+particles_years <- particles_months %>% 
+  group_by(year, GEOID, pop) %>% 
+  summarise(tot_density = sum(density), 
+            mean_density = mean(density), 
+            median_density = median(density)) %>% 
+  ungroup() %>% 
+  mutate(concentration = mean_density / max(mean_density) * 100, 
+         exposure = concentration / 100 * pop)
+
+summary(particles_years$tot_density)
+summary(particles_years$mean_density)
+summary(particles_years$median_density)
+summary(particles_years$concentration)
+summary(particles_years$exposure)
+```
+
+```{r}
+ggplot(particles_years) + 
+  geom_histogram(aes(x = concentration))
+```
+
+```{r}
+ggplot(particles_years) + 
+  geom_histogram(aes(x = exposure))
+```
+
+```{r}
+tracts_sf %<>% 
+    left_join(particles_years %>% 
+                group_by(GEOID) %>% 
+                summarise(mean_concentr = mean(concentration), 
+                          mean_exposure = mean(exposure)))
+```
+
+```{r}
+tracts_sf  %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = mean_concentr), colour = NA, lwd = 0) + 
+    scale_fill_viridis() +
+    theme_map() + 
+    theme(legend.position = "right") + 
+    labs(title = "Annual mean tract concentrations")
+```
+
+```{r}
+tracts_sf  %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = mean_exposure), colour = NA, lwd = 0) + 
+    scale_fill_viridis() +
+    theme_map() + 
+    theme(legend.position = "right") + 
+    labs(title = "Annual mean tract exposures")
+```

@@ -1,0 +1,297 @@
+---
+output: 
+  html_document:
+    keep_md: true
+---
+
+# flares
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(maps)
+library(gridExtra)
+library(cowplot)
+library(RColorBrewer)
+library(ggthemes)
+library(tidycensus)
+library(viridis)
+#### include your census api key
+#census_api_key('<your_key>', install = TRUE)
+```
+
+```{r, include=FALSE}
+#### Read fracking well data
+flares <- read_csv("../data/input/tx-tracts-vnf-nightly.csv")
+
+flares %<>%
+  mutate(STATEFP = as.character(STATEFP), 
+         #COUNTYFP = as.character(COUNTYFP), 
+         #TRACTCE = as.character(TRACTCE),
+         GEOID = as.character(GEOID), 
+         year = year(date), 
+         month = month(date))
+```
+
+```{r, include=FALSE}
+#### read state shapefile
+states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+crs_ <- st_crs(states_sf)
+```
+
+<!-- ```{python} -->
+<!-- import wget -->
+<!-- from zipfile import ZipFile -->
+<!-- import os -->
+
+<!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' -->
+<!-- wget.download(url, os.path.expanduser('~/tmp')) -->
+<!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') -->
+<!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) -->
+<!-- os.system("ls ~/tmp/tl_2016_48_tract/") -->
+<!-- ``` -->
+
+```{r, include=FALSE}
+#### read tracts shapefile
+tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- tracts_sf %>% 
+  dplyr::filter(STATEFP == "48") %>% 
+  mutate(area = ALAND / 1e6) #ALAND in tiger filers is reported in sq meters
+tracts_sf <- st_transform(tracts_sf, crs_)
+```
+
+```{r, include=FALSE}
+#### get tracts population
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+# View(v18)
+
+# Estimate!!Total
+tract_acs <- get_acs(year = 2018,
+                     geography = "tract",
+                     variables = "B01001_001",
+                     state = "TX",
+                     geometry = FALSE)
+tract_acs %<>% 
+  rename(pop = estimate)
+```
+
+```{r, include=FALSE}
+#### join tracts and population
+# all shapefile GEOIDs in acs query
+# sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
+
+tracts_sf %<>% 
+  left_join(tract_acs %>% 
+              select(GEOID, pop))
+```
+
+```{r, include=FALSE}
+#### read cbsa data
+cbsa <- read_csv("../data/input/cbsa.csv")
+
+cbsa %<>% 
+  mutate(cbsa = as.character(cbsa), 
+         fips = as.character(fips))
+```
+
+```{r, include=FALSE}
+#### join tracts_sf and cbsa data
+tracts_sf %<>% 
+  mutate(fips = paste0(STATEFP, COUNTYFP))
+
+# some tracts are not listed in the cbsa file
+# unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips])
+
+tracts_sf %<>% 
+  left_join(cbsa) %>% 
+  mutate(cbsa = if_else(is.na(cbsa), COUNTYFP, cbsa), 
+         cbsa_name = if_else(is.na(cbsa_name), fips, cbsa_name)
+         ) %>% 
+  group_by(cbsa) %>% 
+  mutate(pop_cbsa = sum(pop)) %>% 
+  ungroup()
+```
+
+```{r}
+# aggregate flares and join with tracts geometry
+tracts_sf %<>% 
+  left_join(
+    flares %>% 
+      group_by(GEOID) %>% 
+      summarise(tot_flares = sum(flares))
+  )
+```
+
+## Tract population
+
+Census tracts are small, relatively permanent statistical subdivisions of a county.
+
+Census tracts average about 4,000
+inhabitants
+– Minimum Population – 1,200
+– Maximum Population – 8,000
+
+```{r}
+tracts_sf %>% 
+  mutate(flaring_event = if_else(is.na(tot_flares), F, T)) %>% 
+  ggplot() + 
+  geom_density(aes(x = pop, fill = flaring_event), alpha = 0.5)
+```
+
+```{r}
+tracts_sf %>% 
+  filter(!is.na(tot_flares)) %>% 
+ggplot() + 
+  geom_sf(aes(fill = pop), colour = NA, lwd = 0)
+```
+
+## Area per tract
+
+```{r}
+summary(tracts_sf$area[!is.na(tracts_sf$tot_flares)]) # census tracks with zero land are water only
+```
+
+```{r}
+tracts_sf$tot_flares[tracts_sf$area == 0]
+```
+
+
+## Daily flares
+
+A total of `r prettyNum(sum(flares$flares), big.mark = ",")` flares were reported between Jul 2015 and Dec 2020.
+
+```{r}
+flares %>% 
+  group_by(date) %>% 
+  summarise(flares = sum(flares)) %>% 
+ggplot() + 
+  geom_line(aes(x = date, y = flares, color = flares)) +
+  theme_cowplot() + 
+  labs(title = "Daily total flares", x = "")
+```
+
+A total of `r sprintf('%s', length(unique(flares$GEOID)))` tracts were exposed between Jul 2015 and Dec 2020 to flaring. 
+
+## No wind concentration and exposure
+
+We trace parcels of air that contain emissions of flaring events. First we consider the case where air parcels are not affected by wind, that is  emissions remain in the census tracts where flaring occurs.
+
+As a concentration measure to distinguish air parcels that are more spread in larger areas and denser in smaller areas, we divide the number of air parcels by the census track area.
+
+Specifically, we trace 100 parcels of air containing pollutants for 12 hours after any flaring event and define flaring pollution density as the number of traced parcels lingering in a track divided the census track area (in sq km2). 
+
+```{r}
+ts <- seq(min(flares$date), max(flares$date), by="day")
+ts <- data.frame(date = ts)
+
+flares_daily <- list()
+for(g in unique(flares$GEOID)) {
+  flares_daily[[g]] <- ts %>% 
+    left_join(flares %>% 
+                filter(GEOID == g) %>% 
+                select(date, flares)) %>% 
+    mutate(GEOID = g, 
+           flares = if_else(is.na(flares), 0, flares))
+}
+flares_daily <- bind_rows(flares_daily)
+
+# recover population and area from tracts and add to flares data
+flares_daily %<>% 
+  left_join(
+    tracts_sf %>% 
+      st_drop_geometry() %>% 
+      select(GEOID, pop, area)
+    )
+
+# compute density measure
+flares_daily %<>% 
+  mutate(air_parcels = flares * 12 * 100, 
+         density = air_parcels / area)
+```
+
+```{r}
+# define flares_years
+flares_years <- flares_daily %>% 
+  mutate(year = year(date)) %>% 
+  group_by(year, GEOID, pop) %>% 
+  summarise(tot_density = sum(density), 
+            mean_density = mean(density), 
+            median_density = median(density)) %>% 
+  ungroup() %>% 
+  mutate(concentration = mean_density / max(mean_density) * 100, 
+         exposure = concentration / 100 * pop)
+
+summary(flares_years$tot_density)
+summary(flares_years$mean_density)
+summary(flares_years$median_density)
+summary(flares_years$concentration)
+summary(flares_years$exposure)
+```
+
+```{r}
+ggplot(flares_years) + 
+  geom_histogram(aes(x = concentration))
+```
+
+```{r}
+ggplot(flares_years) + 
+  geom_histogram(aes(x = exposure))
+```
+
+Census tract boundaries are defined in such a way that their population averages 4,000 residents, therefore per tract measurements are loosely population normalized measures. As such, the concentration score per tract translates broadly to a score per 4,000 residents. Between 2016 and 2020 the median concentration scores per track increased from 0.3 to 3, that is the median exposure of the population increased 10 times.
+
+```{r}
+tapply(flares_years$concentration, flares_years$year, summary)
+
+flares_years %>% 
+  filter(year > 2015) %>% 
+  ggplot() +
+  geom_boxplot(aes(x = as.factor(year), y = concentration)) + 
+  scale_y_sqrt()
+```
+
+```{r}
+tapply(flares_years$exposure, flares_years$year, summary)
+
+flares_years %>% 
+  filter(year > 2015) %>% 
+  ggplot() +
+  geom_boxplot(aes(x = as.factor(year), y = exposure)) + 
+  scale_y_sqrt()
+```
+
+```{r}
+tracts_sf %<>% 
+    left_join(flares_years %>% 
+                group_by(GEOID) %>% 
+                summarise(mean_concentr = mean(concentration), 
+                          mean_exposure = mean(exposure)))
+```
+
+```{r}
+tracts_sf  %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = mean_concentr), colour = NA, lwd = 0) + 
+    scale_fill_viridis() +
+    theme_map() + 
+    theme(legend.position = "right") + 
+    labs(title = "Annual mean tract concentrations")
+```
+
+```{r}
+tracts_sf  %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = mean_exposure), colour = NA, lwd = 0) + 
+    scale_fill_viridis() +
+    theme_map() + 
+    theme(legend.position = "right") + 
+    labs(title = "Annual mean tract exposures")
+```
