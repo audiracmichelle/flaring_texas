@@ -13,6 +13,11 @@ args = parser$parse_args()
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
 #### 
+# create dirs
+
+disperseR::create_dirs(args$wkdir)
+
+#### 
 # prepare input
 
 input <- read_rds("./data/input/input.rds")
