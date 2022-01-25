@@ -12,10 +12,31 @@ args = parser$parse_args()
 # args$year = as.integer(2015)
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
+#### 
+# prepare input
+
+input <- read_rds("./data/input/input.rds")
+
+input %<>% 
+  mutate(ID = GEOID, 
+         uID = GEOID, 
+         Height = 20, 
+         year = year(date), 
+         month = month(date),
+         start_day = date, 
+         duration_emiss_hours = 1,
+         duration_run_hours = 12)
+
+input %<>% 
+  filter(year == args$year, 
+         #month %in% c(1,2,3)
+         )
+
 ######## ######## ######## ########
 # link_units
 ######## ######## ######## ########
 
+input.refs = data.table(input, stringsAsFactors = FALSE)
 units.run <- input.refs %>%
   distinct(ID, uID, Latitude, Longitude, Height, year)
 units.run <- data.table(units.run, stringsAsFactors = FALSE)
@@ -27,7 +48,7 @@ year.mons <- disperseR::get_yearmon(start.year = as.character(args$year),
                                     end.month = "12")
 #pbl.height = NULL
 pbl_trim = FALSE
-tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp") 
+tracts_sf <- st_read("./data/input/tl_2016_48_tract/tl_2016_48_tract.shp") 
 tracts_sf %<>% 
   filter(STATEFP == "48") %>% 
   rename(statefp = STATEFP, 
