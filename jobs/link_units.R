@@ -84,8 +84,8 @@ linked_counties %<>%
   na.omit()
 
 write_rds(linked_counties, 
-          paste(args$wkdir, 
-                "/data/output/", 
-                "linked_counties_", 
-                args$year,
-                ".rds"))
+          paste0(args$wkdir, 
+                 "/data/output/", 
+                 "linked_counties_", 
+                 args$year,
+                 ".rds"))
