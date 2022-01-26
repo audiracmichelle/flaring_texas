@@ -13,6 +13,6 @@ module load launcher
 
 export LD_PRELOAD=""
 export LAUNCHER_WORKDIR=/work/08317/m1ch3ll3/stampede2/flaring_texas
-export LAUNCHER_JOB_FILE=jobs/jobs_run_disperser
+export LAUNCHER_JOB_FILE=jobs/jobs_link_units
 
 ${LAUNCHER_DIR}/paramrun
