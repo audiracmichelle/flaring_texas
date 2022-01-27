@@ -59,7 +59,7 @@ crs_ <- st_crs(states_sf)
 
 ```{r, include=FALSE}
 #### read tracts shapefile
-tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- st_read("../data/input/tl_2016_48_tract/tl_2016_48_tract.shp")
 tracts_sf <- tracts_sf %>% 
   dplyr::filter(STATEFP == "48") %>% 
   mutate(area = ALAND / 1e6) #ALAND in tiger filers is reported in sq meters

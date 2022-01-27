@@ -29,14 +29,15 @@ library(leaflet)
 
 ```{r}
 ## Read particles data
-particles <- read_rds("../linked_counties.rds")
+particles <- read_rds("../data/output/linked_counties_2017.rds")
 particles %<>%
   rename(GEOID = geoid, 
          particles = N) %>% 
   mutate(year = as.integer(str_sub(month,1, 4)), 
          month = as.integer(str_sub(month,5, -1)), 
-         date = ymd(sprintf("%04d%02d01", year, month))) %>% 
-  na.omit()
+         date = ymd(sprintf("%04d%02d01", year, month)))
+
+sum(is.na(particles))
 ```
 
 ```{r, include=FALSE}
@@ -59,9 +60,10 @@ crs_ <- st_crs(states_sf)
 
 ```{r, include=FALSE}
 #### read tracts shapefile
-tracts_sf <- st_read("~/tmp/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- st_read("../data/input/tl_2016_48_tract/tl_2016_48_tract.shp")
 tracts_sf <- tracts_sf %>% 
-  dplyr::filter(STATEFP == "48")
+  dplyr::filter(STATEFP == "48") %>% 
+  mutate(area = ALAND / 1e6) #ALAND in tiger filers is reported in sq meters
 tracts_sf <- st_transform(tracts_sf, crs_)
 ```
 
@@ -81,17 +83,6 @@ tract_acs %<>%
 ```
 
 ```{r, include=FALSE}
-#### join tracts and flares
-# all particles GEOIDs in shapefile
-# sum(!particles$GEOID %in% tracts_sf$GEOID)
-
-tracts_sf %<>% 
-  left_join(particles %>% 
-              group_by(GEOID) %>% 
-              summarise(tot_particles = sum(particles)))
-```
-
-```{r, include=FALSE}
 #### join tracts and population
 # all shapefile GEOIDs in acs query
 # sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
@@ -103,7 +94,7 @@ tracts_sf %<>%
 
 ```{r, include=FALSE}
 #### read cbsa data
-cbsa <- read_csv("../data/cbsa.csv")
+cbsa <- read_csv("../data/input/cbsa.csv")
 
 cbsa %<>% 
   mutate(cbsa = as.character(cbsa), 
@@ -128,6 +119,87 @@ tracts_sf %<>%
   ungroup()
 ```
 
+```{r}
+# recover population and area from tracts and add to particles data
+particles %<>%
+  left_join(
+    tracts_sf %>% 
+      st_drop_geometry() %>% 
+      select(GEOID, pop, area)
+    ) %>% 
+  filter(area > 0 )
+```
+
+Understand how particles are linked with input data
+
+```{r}
+input <- read_rds("../data/input/input.rds")
+
+input %<>% 
+  mutate(year = year(date))
+```
+
+```{r}
+input %>% 
+  filter(year == 2017) %>% 
+  group_by(GEOID) %>% 
+  summarise(n = n()) %>% 
+  arrange(n) %>% 
+  head()
+```
+
+```{r}
+input %>% filter(year == 2017, GEOID == "48089750200") # only one emission on 2017-08-29	
+particles %>% filter(ID == "48089750200") # same month of exposure in output: 20178
+```
+
+```{r}
+particles %>% filter(ID == "48089750200") %>% 
+  mutate(particles = particles) %>% 
+  pull(particles)
+particles %>% filter(ID == "48089750200") %>% 
+  mutate(particles = particles) %>% 
+  pull(particles) %>% sum()
+```
+
+```{r}
+tracts_sf %>% 
+    left_join(particles %>% 
+                filter(ID == "48089750200")) %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = particles), colour = NA, lwd = 0) + 
+    scale_fill_viridis() +
+    theme_map() + 
+    theme(legend.position = "right")
+```
+
+```{r}
+input %>% filter(year == 2017, GEOID == "48389950200") # only one emission on 2017-09-22
+particles %>% filter(ID == "48389950200") # same month of exposure in output: 20179
+```
+
+```{r}
+particles %>% filter(ID == "48389950200") %>% 
+  mutate(particles = particles) %>% 
+  pull(particles)
+particles %>% filter(ID == "48389950200") %>% 
+  mutate(particles = particles) %>% 
+  pull(particles) %>% sum()
+```
+
+```{r}
+tracts_sf %>% 
+    left_join(particles %>% 
+                filter(ID == "48389950200")) %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = particles), colour = NA, lwd = 0) + 
+    scale_fill_viridis() +
+    theme_map() + 
+    theme(legend.position = "right")
+```
+
 A total of `r prettyNum(sum(particles$particles), big.mark = ",")` particles were simulated.
 
 A total of `r sprintf('%s', length(unique(particles$GEOID)))` tracts were exposed.
@@ -148,6 +220,17 @@ ggplot() +
 ```
 
 ## Total particles per tract
+
+```{r, include=FALSE}
+#### join tracts and flares
+# all particles GEOIDs in shapefile
+# sum(!particles$GEOID %in% tracts_sf$GEOID)
+
+tracts_sf %<>% 
+  left_join(particles %>% 
+              group_by(GEOID) %>% 
+              summarise(tot_particles = sum(particles)))
+```
 
 Color scheme in deciles.
 
