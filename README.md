@@ -19,9 +19,9 @@ In the dockerized connection to Rstudio open [./disperser_script.r](./disperser_
   * [./notebooks/particles_example.md](./notebooks/particles_example.md)
        + A single emission example of dispersion
        + Example of distance traveled after 12 hours  
-  * [./notebooks/flares.md](./notebooks/flares.md)
+  * [./notebooks/flares.md](./notebooks/flares.md), [./notebooks/flares_years.md](./notebooks/flares_years.md)
        + Analysis of flaring events per tract area normalized
-  * [./notebooks/particles.md](./notebooks/particles.md)
+  * [./notebooks/particles.md](./notebooks/particles.md), [./notebooks/particles_years.md](./notebooks/particles_years.md)
        + Analysis of flaring-origin air parcels dispersion
   * [./notebooks/exposure.md](./notebooks/exposure.md)
        + Population exposure comparison between --flaring events per tract criteria-- vs --flaring-origin air parcels dispersion criteria--
