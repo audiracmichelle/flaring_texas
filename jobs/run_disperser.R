@@ -18,6 +18,10 @@ args = parser$parse_args()
 # args$chunk = as.integer(250)
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
+####
+# override original disperseR functions
+source("./R/run_disperser_parallel.R")
+
 #### 
 # prepare input
 
@@ -79,14 +83,14 @@ for(c in 1:(length(chunk_seq) - 1)) {
   flag = 1
   iter = 0
   while(flag > 0 | iter < 3) {
-    hysp_raw <- disperseR::run_disperser_parallel(input.refs = input.refs,
-                                                  pbl.height = pbl.height,
-                                                  species = species,
-                                                  proc_dir = proc_dir,
-                                                  overwrite = overwrite,
-                                                  npart = npart,
-                                                  keep.hysplit.files = keep.hysplit.files,
-                                                  mc.cores = parallel::detectCores())
+    hysp_raw <- run_disperser_parallel(input.refs = input.refs,
+                                       pbl.height = pbl.height,
+                                       species = species,
+                                       proc_dir = proc_dir,
+                                       overwrite = overwrite,
+                                       npart = npart,
+                                       keep.hysplit.files = keep.hysplit.files,
+                                       mc.cores = parallel::detectCores())
     
     run_log <- unlist(hysp_raw)
     flag <- length(grep("Error", run_log))
