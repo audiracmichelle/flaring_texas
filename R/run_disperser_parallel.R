@@ -144,7 +144,10 @@ run_fac <- function(x,
   ## Initial output data.table
   out <-
     paste(
-      "Partial trimmed parcel locations (below height 0 and the highest PBL height) already exist at",
+      ##### -------- adaptation >>>
+      #"Partial trimmed parcel locations (below height 0 and the highest PBL height) already exist at",
+      "Parcel locations already exist at",
+      ##### -------- adaptation >>>
       output_file
     )
 
@@ -227,7 +230,7 @@ run_fac <- function(x,
       paste(
         ##### -------- adaptation >>>
         # "Partial trimmed parcel locations (below height 0 and the highest PBL height) written to",
-        "Partial trimmed parcel locations written to",
+        "Parcel locations written to",
         ##### -------- adaptation <<<
         output_file
       )
