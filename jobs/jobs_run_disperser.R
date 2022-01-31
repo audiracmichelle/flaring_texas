@@ -5,6 +5,6 @@ for(y in seq(2015,2020)) {
             "-n 20", 
             "-c", 
             c, 
-            "-w '/work/08317/m1ch3ll3/stampede2/flaring_texas'", collapse = "\n"), 
+            "-w '/work/08317/m1ch3ll3/stampede2/flaring_texas'\n", collapse = ""), 
       file = paste0("./jobs_run_disperser_", y))
 }
