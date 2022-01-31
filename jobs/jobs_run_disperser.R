@@ -1,7 +1,10 @@
 c <- seq(100)
-cat(paste("singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser.R -y 2015 -n 100", 
-          "-c", 
-          c, 
-          "-w '/work/08317/m1ch3ll3/stampede2/flaring_texas'", collapse = "\n"), 
-    file = "./jobs_run_disperser")
- 
+for(y in seq(2015,2020)) {
+  cat(paste("singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser.R -y", 
+            y, 
+            "-n 100", 
+            "-c", 
+            c, 
+            "-w '/work/08317/m1ch3ll3/stampede2/flaring_texas'", collapse = "\n"), 
+      file = paste0("./jobs_run_disperser_", y))
+}
