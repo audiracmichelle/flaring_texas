@@ -121,5 +121,9 @@ system(paste0("echo ",
               paste(flags, collapse = ''), 
               " > flags_",
               args$year, 
+              "_", 
+              args$n, 
+              "_",
+              args$c, 
               ".txt")
 )
