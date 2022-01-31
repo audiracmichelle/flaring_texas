@@ -95,12 +95,12 @@ for(c in 1:(length(chunk_seq) - 1)) {
                                          npart = npart,
                                          keep.hysplit.files = keep.hysplit.files,
                                          mc.cores = mc.cores)
-    }, error = function(e) {system(paste0("echo Error_", 
-                                          args$year, "_", 
-                                          args$start, "_", 
-                                          args$end, "_", 
-                                          args$n, "_", 
-                                          c, "\n >> error.txt"))}
+    }, error = function(e) {paste0("echo Error_", 
+                                   args$year, "_", 
+                                   args$start, "_", 
+                                   args$end, "_", 
+                                   args$n, "_", 
+                                   c)}
     )
     
   run_log <- unlist(hysp_raw)
@@ -111,6 +111,5 @@ for(c in 1:(length(chunk_seq) - 1)) {
                 args$end, "_", 
                 args$n, "_",
                 c, "_",
-                flag, "\n >> flag.txt")
-  )
+                flag, "\n >> flag.txt"))
 }
