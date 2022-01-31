@@ -29,14 +29,19 @@ library(leaflet)
 
 ```{r}
 ## Read particles data
-particles_months <- read_rds("../data/output/linked_counties.rds")
+particles_months = list()
+particles_months[["2015"]] <- read_rds("../data/output/linked_counties_2015.rds")
+particles_months[["2016"]] <- read_rds("../data/output/linked_counties_2016.rds")
+particles_months[["2017"]] <- read_rds("../data/output/linked_counties_2017.rds")
+particles_months <- bind_rows(particles_months)
 particles_months %<>%
   rename(GEOID = geoid, 
          density = N) %>% 
   mutate(year = as.integer(str_sub(month,1, 4)), 
          month = as.integer(str_sub(month,5, -1)), 
-         date = ymd(sprintf("%04d%02d01", year, month))) %>% 
-  na.omit()
+         date = ymd(sprintf("%04d%02d01", year, month))) 
+
+#sum(is.na(particles_months))
 ```
 
 ```{r, include=FALSE}
@@ -82,7 +87,7 @@ tract_acs %<>%
 ```
 
 ```{r, include=FALSE}
-#### join tracts and flares
+#### join tracts and particles
 # all particles GEOIDs in shapefile
 # sum(!particles$GEOID %in% tracts_sf$GEOID)
 
@@ -142,20 +147,18 @@ particles_months %<>%
   filter(area > 0 )
 ```
 
+The units of the output of the original disperseR link_units function is "air parcel counts per 12 sq km". Zero month counts are not included, as is mean and median cannot be calculated.
+
 ```{r}
-# define flares_years
+# define particles_years
 particles_years <- particles_months %>% 
   group_by(year, GEOID, pop) %>% 
-  summarise(tot_density = sum(density), 
-            mean_density = mean(density), 
-            median_density = median(density)) %>% 
+  summarise(tot_density = sum(density)) %>% 
   ungroup() %>% 
-  mutate(concentration = mean_density / max(mean_density) * 100, 
+  mutate(concentration = tot_density / max(tot_density) * 100, 
          exposure = concentration / 100 * pop)
 
 summary(particles_years$tot_density)
-summary(particles_years$mean_density)
-summary(particles_years$median_density)
 summary(particles_years$concentration)
 summary(particles_years$exposure)
 ```
@@ -168,6 +171,16 @@ ggplot(particles_years) +
 ```{r}
 ggplot(particles_years) + 
   geom_histogram(aes(x = exposure))
+```
+
+```{r}
+tapply(particles_years$concentration, particles_years$year, summary)
+
+particles_years %>% 
+  #filter(year > 2015) %>% 
+  ggplot() +
+  geom_boxplot(aes(x = as.factor(year), y = concentration)) + 
+  scale_y_sqrt()
 ```
 
 ```{r}
