@@ -13,9 +13,9 @@ parser$add_argument("-w", "--wkdir", default=NULL,
 args = parser$parse_args()
 
 # args=list()
-# args$year = as.integer(2015)
+# args$year = as.integer(2017)
 # args$n_chunks = as.integer(1000)
-# args$chunk = as.integer(250)
+# args$chunk = as.integer(1000)
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
 ####
@@ -77,12 +77,11 @@ mc.cores = parallel::detectCores()
 
 flags = c()
 for(c in 1:(length(chunk_seq) - 1)) {
-  range = seq(chunk_seq[c] + 1, chunk_seq[c+1])
+  range = seq(chunk_seq[c], chunk_seq[c+1])
   input.refs = data.table(input[range,], stringsAsFactors = FALSE)
   
-  flag = 1
   iter = 0
-  while(flag > 0 | iter < 3) {
+  while(iter < 3) {
     hysp_raw <- run_disperser_parallel(input.refs = input.refs,
                                        pbl.height = pbl.height,
                                        species = species,
@@ -90,11 +89,16 @@ for(c in 1:(length(chunk_seq) - 1)) {
                                        overwrite = overwrite,
                                        npart = npart,
                                        keep.hysplit.files = keep.hysplit.files,
-                                       mc.cores = parallel::detectCores())
+                                       mc.cores = mc.cores)
     
     run_log <- unlist(hysp_raw)
     flag <- length(grep("Error", run_log))
-    iter = iter + 1
+    
+    if(flag == 0){
+      iter = 3
+    } else {
+      iter = iter + 1
+    }
   }
   
   if(flag > 0) {
