@@ -51,7 +51,7 @@ year.mons <- disperseR::get_yearmon(start.year = as.character(args$year),
                                     start.month = "01",
                                     end.year = as.character(args$year),
                                     end.month = "12")
-#pbl.height = NULL
+by.time = "day"
 pbl_trim = FALSE
 tracts_sf <- st_read("./data/input/tl_2016_48_tract/tl_2016_48_tract.shp") 
 tracts_sf %<>% 
@@ -66,14 +66,15 @@ tracts_sf %<>%
          state_name = statefp)
 crosswalk. = NULL
 duration.run.hours = 12
+res.link = 5
 overwrite = FALSE
 
-linked_counties <- disperseR::link_all_units(
+linked_counties <- link_all_units(
   units.run = units.run,
   link.to = link.to,
   mc.cores = mc.cores,
   year.mons = year.mons,
-  #pbl.height = pblheight,
+  by.time = by.time, 
   pbl_trim = pbl_trim,
   counties. = tracts_sf,
   crosswalk. = crosswalk.,
