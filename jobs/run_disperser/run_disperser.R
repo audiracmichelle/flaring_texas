@@ -81,35 +81,29 @@ overwrite = FALSE
 npart = 100
 keep.hysplit.files = FALSE ## FALSE BY DEFAULT
 mc.cores = parallel::detectCores()
-
 for(c in 1:(length(chunk_seq) - 1)) {
   range = seq(chunk_seq[c]  + 1, chunk_seq[c+1])
   input.refs = data.table(input[range,], stringsAsFactors = FALSE)
   
-  hysp_raw <- tryCatch({
-      run_disperser_parallel(input.refs = input.refs,
-                                         pbl.height = pbl.height,
-                                         species = species,
-                                         proc_dir = proc_dir,
-                                         overwrite = overwrite,
-                                         npart = npart,
-                                         keep.hysplit.files = keep.hysplit.files,
-                                         mc.cores = mc.cores)
-    }, error = function(e) {paste0("echo Error_", 
-                                   args$year, "_", 
-                                   args$start, "_", 
-                                   args$end, "_", 
-                                   args$n, "_", 
-                                   c)}
-    )
-    
+  hysp_raw <- try({
+    run_disperser_parallel(input.refs = input.refs,
+                           pbl.height = pbl.height,
+                           species = species,
+                           proc_dir = proc_dir,
+                           overwrite = overwrite,
+                           npart = npart,
+                           keep.hysplit.files = keep.hysplit.files,
+                           mc.cores = mc.cores)
+  })
+  
   run_log <- unlist(hysp_raw)
   flag <- length(grep("Error", run_log))
-  system(paste0("echo Flag_", 
-                args$year, "_", 
-                args$start, "_", 
-                args$end, "_", 
-                args$n, "_",
-                c, "_",
-                flag, "\n >> flag.txt"))
+  cat(paste0("Flag_", 
+             args$year, "_", 
+             args$start, "_", 
+             args$end, "_", 
+             args$n, "_",
+             c, "_",
+             flag, "\n"), file = "flag.txt", append = TRUE)
 }
+
