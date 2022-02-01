@@ -144,10 +144,10 @@ run_fac <- function(x,
   ## Initial output data.table
   out <-
     paste(
-      ##### -------- adaptation >>>
+      ##### -------- flaring_texas adaptation >>>
       #"Partial trimmed parcel locations (below height 0 and the highest PBL height) already exist at",
       "Parcel locations already exist at",
-      ##### -------- adaptation >>>
+      ##### -------- flaring_texas adaptation >>>
       output_file
     )
 
@@ -198,28 +198,25 @@ run_fac <- function(x,
 
     ## Extract output from the dispersion model
     dispersion_df <- dispersion_model %>% get_output_df() %>% data.table()
-
-    ## trim particles if they go below zero
-    disp_df <- trim_zero(dispersion_df)
     
     ## trim particles if they go below zero
-    ##### -------- adaptation >>>
+    ##### -------- flaring_texas adaptation >>>
     # disp_df <- trim_zero(dispersion_df)
     disp_df <- dispersion_df
-    ##### -------- adaptation <<<
+    ##### -------- flaring_texas adaptation <<<
 
     ## Add parcel date and time
     disp_df$Pdate <- subset$start_day + disp_df$hour / 24
-    #### -------- adaptation >>>
+    #### -------- flaring_texas adaptation >>>
     # for a very high time resolution application Pdate should be modified to
     # disp_df$PDATE <- as.POSIXct(subset$start_day + subset$start_hour / 24 + disp_df$hour / 24) #michelle: added subset start hour
-    #### -------- adaptation <<<
+    #### -------- flaring_texas adaptation <<<
 
     # trims particles that are above the global max boundary value
-    ##### -------- adaptation >>>
+    ##### -------- flaring_texas adaptation >>>
     # disp_df_trim <- disp_df[height <= 2665]
     disp_df_trim <- disp_df
-    ##### -------- adaptation <<<
+    ##### -------- flaring_texas adaptation <<<
 
     ## Save R data frame
     save.vars <- c('lon', 'lat', 'height', 'Pdate', 'hour')
@@ -228,10 +225,10 @@ run_fac <- function(x,
     write.fst(partial_trimmed_parcel_locs, output_file)
     out <-
       paste(
-        ##### -------- adaptation >>>
+        ##### -------- flaring_texas adaptation >>>
         # "Partial trimmed parcel locations (below height 0 and the highest PBL height) written to",
         "Parcel locations written to",
-        ##### -------- adaptation <<<
+        ##### -------- flaring_texas adaptation <<<
         output_file
       )
 
