@@ -74,15 +74,24 @@ link_to <- function(d,
   # if county.so, return xyz object
   if( link.to == 'counties'){
     print( 'Linking counties!')
+    
+    ##### -------- flaring_texas adaptation >>>
+    # if( link.to == 'counties'){
+    #   print( 'Linking counties!')
+    #   county.o <- over( county.sp,
+    #                     r3,
+    #                     fn = mean)
     county.o <- over( county.sp,
                       r3,
-                      fn = mean)
+                      fn = sum)
+    ##### -------- flaring_texas adaptation <<<
+    
     county.dt <- data.table( county.o)
     county.dt <- cbind( as.data.table( county.sp[, c( 'statefp', 'countyfp', 'state_name',
                                                       'name', 'geoid')]),
                         county.dt)
     setnames( county.dt, names( r3), 'N')
-
+    
     # if "over" returned no matches, need a vector of NA's
     if( nrow( county.dt) == 1 & is.na( county.dt[1, 1])){
       county.dt <- cbind( as.data.table( county.sp[, c( 'statefp', 'countyfp', 'state_name',
@@ -90,7 +99,7 @@ link_to <- function(d,
                           data.table( X = as.numeric( rep( NA, length( county.sp)))))
       setnames( county.dt, "X", 'N')
     }
-
+    
     return( county.dt)
   }
 
@@ -219,7 +228,8 @@ trim_pbl <- function(Min,
 
 
 #' @export disperser_link_grids
-disperser_link_grids <- function(  month_YYYYMM = NULL,
+disperser_link_grids <- function(  link_dates = NULL, 
+                                   month_YYYYMM = NULL,
                                    start.date = NULL,
                                    end.date = NULL,
                                    unit,
@@ -231,6 +241,12 @@ disperser_link_grids <- function(  month_YYYYMM = NULL,
                                    crop.usa = FALSE,
                                    return.linked.data.){
   unitID <- unit$ID
+  
+  # use dates in link_dates if available
+  if( !is.null( link_dates)){
+    start.date <- link_dates$start.date
+    end.date <- link_dates$end.date
+  }
 
   if( (is.null( start.date) | is.null( end.date)) & is.null( month_YYYYMM))
     stop( "Define either a start.date and an end.date OR a month_YYYYMM")
@@ -360,7 +376,8 @@ disperser_link_grids <- function(  month_YYYYMM = NULL,
 
 
 #' @export disperser_link_counties
-disperser_link_counties <- function( month_YYYYMM = NULL,
+disperser_link_counties <- function( link_dates = NULL,
+                                     month_YYYYMM = NULL,
                                      start.date = NULL,
                                      end.date = NULL,
                                      counties,
@@ -373,6 +390,12 @@ disperser_link_counties <- function( month_YYYYMM = NULL,
                                      return.linked.data.){
 
   unitID <- unit$ID
+  
+  # use dates in link_dates if available
+  if( !is.null( link_dates)){
+    start.date <- link_dates$start.date
+    end.date <- link_dates$end.date
+  }
 
   if ((is.null(start.date) | is.null(end.date)) & is.null(month_YYYYMM))
     stop("Define either a start.date and an end.date OR a month_YYYYMM")
@@ -445,7 +468,10 @@ disperser_link_counties <- function( month_YYYYMM = NULL,
     print(  paste( Sys.time(), "Files read and combined"))
 
     ## Trim dates & first hour
-    d <- d[ as( Pdate, 'character') %in% vec_dates & hour > 1, ]
+    ##### -------- flaring_texas adaptation >>>
+    # d <- d[ as( Pdate, 'character') %in% vec_dates & hour > 1, ] # hour >=1?
+    d <- d[as( Pdate, 'character') %in% vec_dates]
+    ##### -------- flaring_texas adaptation <<<
 
     ## Trim PBL's
     if( pbl.){
@@ -507,7 +533,8 @@ disperser_link_counties <- function( month_YYYYMM = NULL,
 }
 
 #' @export disperser_link_zips
-disperser_link_zips <- function(month_YYYYMM = NULL,
+disperser_link_zips <- function(link_dates = NULL,
+                                month_YYYYMM = NULL,
                                 start.date = NULL,
                                 end.date = NULL,
                                 unit,
@@ -519,6 +546,11 @@ disperser_link_zips <- function(month_YYYYMM = NULL,
                                 pbl. = TRUE,
                                 return.linked.data.) {
   unitID <- unit$ID
+  # use dates in link_dates if available
+  if( !is.null( link_dates)){
+    start.date <- link_dates$start.date
+    end.date <- link_dates$end.date
+  }
 
   if ((is.null(start.date) | is.null(end.date)) & is.null(month_YYYYMM))
     stop("Define either a start.date and an end.date OR a month_YYYYMM")
