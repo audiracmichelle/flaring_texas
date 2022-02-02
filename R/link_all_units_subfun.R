@@ -415,7 +415,14 @@ disperser_link_counties <- function( link_dates = NULL,
     end.date <-
       seq(start.date, by = paste (1, "months"), length = 2)[2] - 1
   }
+  
+  if( is.null( month_YYYYMM))
+    month_YYYYMM <- paste( start.date, end.date, sep = '_')
+  
+  month_YYYYMM <- as( month_YYYYMM, 'character')
 
+  print(month_YYYYMM)
+  
   ## name the eventual output file
   output_file <-
     file.path( ziplink_dir,
@@ -486,10 +493,16 @@ disperser_link_counties <- function( link_dates = NULL,
       print( paste( Sys.time(), "PBLs trimmed"))
     } else
       d_trim <- d
+    
+    ##### -------- flaring_texas adaptation >>>
+    d_trim <- na.omit(d_trim)
+    ##### -------- flaring_texas adaptation <<<
 
     counties.sp <- sf::as_Spatial( counties)
     p4s <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m"
     counties.sp <- spTransform(counties.sp, p4s)
+    
+    print("entering link_to")
 
     disp_df_link <- link_to( d = d_trim,
                              link.to = 'counties',
