@@ -393,6 +393,8 @@ disperser_link_counties <- function( link_dates = NULL,
 
   unitID <- unit$ID
   
+  message(paste("processing unit", unit$ID, ""))
+  
   # use dates in link_dates if available
   if( !is.null( link_dates)){
     start.date <- link_dates$start.date
@@ -561,6 +563,9 @@ disperser_link_zips <- function(link_dates = NULL,
                                 pbl. = TRUE,
                                 return.linked.data.) {
   unitID <- unit$ID
+  
+  message(paste("processing unit", unit$ID, ""))
+  
   # use dates in link_dates if available
   if( !is.null( link_dates)){
     start.date <- link_dates$start.date
