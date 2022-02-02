@@ -1,0 +1,97 @@
+# input
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(maps)
+```
+
+* Read fracking well data
+
+```{r}
+input <- read_csv("./tx-tracts-vnf-nightly.csv")
+input %<>%
+  mutate(STATEFP = as.character(STATEFP), 
+         #COUNTYFP = as.character(COUNTYFP), 
+         #TRACTCE = as.character(TRACTCE),
+         GEOID = as.character(GEOID))
+head(input)
+```
+
+```{r}
+summary(input) 
+```
+
+* Get centroids
+
+```{r}
+states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+head(states_sf)
+crs_ <- st_crs(states_sf)
+```
+
+```{r}
+tracts_sf <- st_read("./tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- tracts_sf %>% 
+  dplyr::filter(STATEFP == "48")
+tracts_sf <- st_transform(tracts_sf, crs_)
+head(tracts_sf)
+```
+
+```{r}
+geoid_ <- unique(input$GEOID)
+centroids_sf <- tracts_sf %>% 
+  filter(GEOID %in% geoid_)
+head(centroids_sf)
+```
+
+```{r}
+ggplot() + 
+  geom_sf(data = filter(states_sf, ID == "texas")) + 
+  geom_sf(data = centroids_sf, fill = "blue")
+```
+
+```{r}
+centroids_sf <- centroids_sf %>% 
+  st_centroid(centroids_sf)
+
+ggplot() + 
+  geom_sf(data = filter(states_sf, ID == "texas")) + 
+  geom_sf(data = centroids_sf, color = "red")
+```
+
+```{r}
+coords <- as_tibble(st_coordinates(centroids_sf)) %>% 
+  rename(Latitude = Y, 
+         Longitude = X)
+centroids_sf <- bind_cols(centroids_sf, coords)
+head(centroids_sf)
+```
+
+* Prepare input data for disperser
+
+```{r}
+start_hour_ <- lapply(input$flares, function(x) (seq(0, x - 1) %% 6) + 1)
+input$start_hour = start_hour_
+input <- unnest(input, cols = c(start_hour))
+
+input %<>% 
+  rename(tot_flares = flares) %>% 
+  group_by(STATEFP, COUNTYFP, TRACTCE, GEOID, date, tot_flares, start_hour) %>% 
+  summarise(flares = n()) %>% 
+  ungroup()
+```
+
+```{r}
+input %<>% 
+  left_join(centroids_sf %>% 
+              st_drop_geometry() %>% 
+              select(GEOID, Latitude, Longitude))
+head(input)
+```
+
+```{r}
+write_rds(input, "./input.rds")
+```
