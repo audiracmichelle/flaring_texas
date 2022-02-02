@@ -100,5 +100,6 @@ write_rds(linked_counties,
           paste0(args$wkdir, 
                  "/data/output/", 
                  "linked_counties_", 
-                 args$year,
-                 ".rds"))
+                 args$year, "_", 
+                 args$start, "_", 
+                 args$end, ".rds"))
