@@ -45,7 +45,8 @@ input %<>%
 
 input %<>% 
   filter(year == args$year, 
-         #month %in% c(1,2,3)
+         month >= args$start,
+         month <= args$end
          )
 
 ######## ######## ######## ########
