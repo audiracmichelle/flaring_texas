@@ -73,7 +73,7 @@ link_to <- function(d,
 
   # if county.so, return xyz object
   if( link.to == 'counties'){
-    print( 'Linking counties!')
+    ##### print( 'Linking counties!')
     
     ##### -------- flaring_texas adaptation >>>
     # if( link.to == 'counties'){
@@ -242,6 +242,8 @@ disperser_link_grids <- function(  link_dates = NULL,
                                    return.linked.data.){
   unitID <- unit$ID
   
+  message(paste("processed unit", unit$ID, ""))
+  
   # use dates in link_dates if available
   if( !is.null( link_dates)){
     start.date <- link_dates$start.date
@@ -321,7 +323,7 @@ disperser_link_grids <- function(  link_dates = NULL,
     d <- rbindlist(l)
     if( length( d) == 0)
       return( paste( "No files available to link in", month_YYYYMM))
-    print(  paste( Sys.time(), "Files read and combined"))
+    ##### print(  paste( Sys.time(), "Files read and combined"))
 
     ## Trim dates & first hour
     d <- d[ as( Pdate, 'character') %in% vec_dates & hour > 1, ]
@@ -336,7 +338,7 @@ disperser_link_grids <- function(  link_dates = NULL,
 
       d_trim <- trim_pbl( d,
                           rasterin = pbl.height)
-      print( paste( Sys.time(), "PBLs trimmed"))
+      ##### print( paste( Sys.time(), "PBLs trimmed"))
     } else
       d_trim <- d
 
@@ -349,7 +351,7 @@ disperser_link_grids <- function(  link_dates = NULL,
                              res.link. = res.link.,
                              pbl. = pbl.,
                              crop.usa = crop.usa)
-    print(  paste( Sys.time(), "Grids linked"))
+    ##### print(  paste( Sys.time(), "Grids linked"))
     out <- disp_df_link
     out$month <- as( month_YYYYMM, 'character')
     out$ID <- unitID
@@ -357,7 +359,7 @@ disperser_link_grids <- function(  link_dates = NULL,
     if( nrow( out) != 0){
       ## write to file
       write.fst( out,output_file)
-      print( paste( Sys.time(), "Linked grids and saved to", output_file))
+      ##### print( paste( Sys.time(), "Linked grids and saved to", output_file))
     }
   } else {
     print( paste("File", output_file, "already exists! Use overwrite = TRUE to over write"))
@@ -421,7 +423,7 @@ disperser_link_counties <- function( link_dates = NULL,
   
   month_YYYYMM <- as( month_YYYYMM, 'character')
 
-  print(month_YYYYMM)
+  ##### print(month_YYYYMM)
   
   ## name the eventual output file
   output_file <-
@@ -472,7 +474,7 @@ disperser_link_counties <- function( link_dates = NULL,
     d <- rbindlist(l)
     if( length( d) == 0)
       return( paste( "No files available to link in", month_YYYYMM))
-    print(  paste( Sys.time(), "Files read and combined"))
+    ##### print(  paste( Sys.time(), "Files read and combined"))
 
     ## Trim dates & first hour
     ##### -------- flaring_texas adaptation >>>
@@ -490,7 +492,7 @@ disperser_link_counties <- function( link_dates = NULL,
 
       d_trim <- trim_pbl( d,
                           rasterin = pbl.height)
-      print( paste( Sys.time(), "PBLs trimmed"))
+      ##### print( paste( Sys.time(), "PBLs trimmed"))
     } else
       d_trim <- d
     
@@ -502,7 +504,7 @@ disperser_link_counties <- function( link_dates = NULL,
     p4s <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m"
     counties.sp <- spTransform(counties.sp, p4s)
     
-    print("entering link_to")
+    ##### print("entering link_to")
 
     disp_df_link <- link_to( d = d_trim,
                              link.to = 'counties',
@@ -512,7 +514,7 @@ disperser_link_counties <- function( link_dates = NULL,
                              res.link. = res.link.,
                              pbl. = pbl.)
 
-    print(  paste( Sys.time(), "Counties linked"))
+    ##### print(  paste( Sys.time(), "Counties linked"))
 
     out <- as.data.table( disp_df_link)
     out$month <- as( month_YYYYMM, 'character')
@@ -522,7 +524,7 @@ disperser_link_counties <- function( link_dates = NULL,
       ## write to file
       write.fst( out, output_file)
 
-      print( paste( Sys.time(), "Linked counties and saved to", output_file))
+      ##### print( paste( Sys.time(), "Linked counties and saved to", output_file))
     }
   } else {
     print( paste("File", output_file, "already exists! Use overwrite = TRUE to over write"))
@@ -641,7 +643,7 @@ disperser_link_zips <- function(link_dates = NULL,
     if (length(d) == 0) {
       return(paste("No files available to link in", month_YYYYMM))
     }
-    print(paste(Sys.time(), "Files read and combined"))
+    ##### print(paste(Sys.time(), "Files read and combined"))
 
     ## Trim dates & first hour
     d <- d[ as( Pdate, 'character') %in% vec_dates & hour > 1, ]
@@ -657,7 +659,7 @@ disperser_link_zips <- function(link_dates = NULL,
 
       d_trim <- trim_pbl( d,
                           rasterin = pbl.height)
-      print( paste( Sys.time(), "PBLs trimmed"))
+      ##### print( paste( Sys.time(), "PBLs trimmed"))
     } else
       d_trim <- d
 
@@ -674,7 +676,7 @@ disperser_link_zips <- function(link_dates = NULL,
         res.link. = res.link.,
         pbl. = pbl.
       )
-    print(paste(Sys.time(), "ZIPs linked"))
+    ##### print(paste(Sys.time(), "ZIPs linked"))
 
     out <- disp_df_link[, .(ZIP, N)]
     out$ZIP <- formatC(out$ZIP, width = 5, format = "d", flag = "0")
@@ -684,14 +686,10 @@ disperser_link_zips <- function(link_dates = NULL,
     ## write to file
     if (nrow(out) != 0) {
       write.fst(out, zip_output_file)
-      print(paste(Sys.time(), "Linked ZIPs and saved to", zip_output_file))
+      ##### print(paste(Sys.time(), "Linked ZIPs and saved to", zip_output_file))
     }
   } else {
-    print(paste(
-      "File",
-      zip_output_file,
-      "already exists! Use overwrite = TRUE to over write"
-    ))
+    print(paste("File", zip_output_file, "already exists! Use overwrite = TRUE to over write"))
     if( return.linked.data.)
       out <- read.fst(zip_output_file, as.data.table = TRUE)
 
