@@ -242,7 +242,7 @@ disperser_link_grids <- function(  link_dates = NULL,
                                    return.linked.data.){
   unitID <- unit$ID
   
-  message(paste("processed unit", unit$ID, ""))
+  message(paste("processing unit", unit$ID, ""))
   
   # use dates in link_dates if available
   if( !is.null( link_dates)){
