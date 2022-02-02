@@ -4,13 +4,24 @@ library(argparse)
 parser <- ArgumentParser()
 parser$add_argument("-y", "--year", default=2015,
                     help="Year to run", type="integer")
+parser$add_argument("-start", "--start", default=NULL,
+                    help="Start month", type="integer")
+parser$add_argument("-end", "--end", default=NULL,
+                    help="End month", type="integer")
 parser$add_argument("-w", "--wkdir", default=NULL,
                     help="Working directory", type="character")
 args = parser$parse_args()
 
 # args=list()
 # args$year = as.integer(2015)
+# args$start = as.integer(7)
+# args$end = as.integer(12)
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+
+####
+# override original disperseR functions
+source("./R/link_all_units_subfun.R")
+source("./R/link_all_units.R")
 
 #### 
 # create dirs
@@ -48,10 +59,10 @@ units.run <- data.table(units.run, stringsAsFactors = FALSE)
 link.to = 'counties'
 mc.cores = parallel::detectCores()
 year.mons <- disperseR::get_yearmon(start.year = as.character(args$year),
-                                    start.month = "01",
+                                    start.month = as.character(args$start),
                                     end.year = as.character(args$year),
-                                    end.month = "12")
-by.time = "day"
+                                    end.month = as.character(args$end))
+by.time = "month"
 pbl_trim = FALSE
 tracts_sf <- st_read("./data/input/tl_2016_48_tract/tl_2016_48_tract.shp") 
 tracts_sf %<>% 
@@ -66,7 +77,7 @@ tracts_sf %<>%
          state_name = statefp)
 crosswalk. = NULL
 duration.run.hours = 12
-res.link = 5
+res.link = 5000
 overwrite = FALSE
 
 linked_counties <- link_all_units(
