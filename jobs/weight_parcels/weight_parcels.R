@@ -77,6 +77,7 @@ for(c in 1:(length(chunk_seq) - 1)) {
   cat(paste0("weight_parcels_", 
              args$year, "_", 
              args$n, "_",
+             args$c, "_",
              c, " flag ",
              flag, "\n"), file = "flag.txt", append = TRUE)
 }
