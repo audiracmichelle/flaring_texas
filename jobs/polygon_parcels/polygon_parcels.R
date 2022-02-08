@@ -13,9 +13,9 @@ parser$add_argument("-w", "--wkdir", default=NULL,
 args = parser$parse_args()
 
 # args=list()
-# args$year = as.integer(2016)
-# args$n_chunks = as.integer(100)
-# args$chunk = NULL
+# args$year = as.integer(2019)
+# args$n_chunks = as.integer(20)
+# args$chunk = 1
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
 ####
@@ -72,7 +72,7 @@ for(c in 1:(length(chunk_seq) - 1)) {
   range = seq(chunk_seq[c]  + 1, chunk_seq[c+1])
   input.refs = data.table(input[range,], stringsAsFactors = FALSE)
   
-  polygon_parcels_ <- try({
+  polygon_parcels <- try({
     polygon_parcels_parallel(input.refs = input.refs, 
                              sf = sf, 
                              hysp_dir = hysp_dir, 
@@ -86,7 +86,7 @@ for(c in 1:(length(chunk_seq) - 1)) {
                                   args$c, "_",
                                   c, ".fst"))
   
-  write.fst(polygon_parcels_, output_file)
+  write.fst(polygon_parcels, output_file)
 
   cat(paste0("polygon_parcels_", 
              args$year, "_", 
