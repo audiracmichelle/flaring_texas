@@ -79,7 +79,10 @@ for(c in 1:(length(chunk_seq) - 1)) {
                              mc.cores = mc.cores)
   })
   
+  if(!dir.exists(file.path(ziplink_dir, args$year)))
+    dir.create(file.path(ziplink_dir, args$year))
   output_file <- file.path(ziplink_dir, 
+                           args$year, 
                            paste0("polygon_parcels_", 
                                   args$year, "_", 
                                   args$n, "_",
