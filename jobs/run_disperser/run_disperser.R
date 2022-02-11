@@ -68,7 +68,11 @@ disperseR::get_data(data = "metfiles",
 
 if(is.null(args$start)){start = 0} else {start = args$start}
 if(is.null(args$end)){end = nrow(input)} else {end = args$end}
-chunk_seq = round(seq(start,end,length.out=(args$n_chunks + 1)))
+if((end - start) < args$n_chunks){
+  chunk_seq = seq(start,end)
+} else {
+  chunk_seq = round(seq(start,end,length.out=(args$n_chunks + 1)))
+}
 
 if(!is.null(args$chunk)) {
   chunk_seq = c(chunk_seq[args$chunk], chunk_seq[args$chunk+1])  
