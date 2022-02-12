@@ -4,7 +4,7 @@ output:
     keep_md: true
 ---
 
-# flares
+# particles
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F)
@@ -18,23 +18,26 @@ library(sf)
 library(maps)
 library(gridExtra)
 library(cowplot)
+library(viridis)
 library(RColorBrewer)
 library(ggthemes)
 library(tidycensus)
-library(viridis)
+library(leaflet)
 #### include your census api key
-#census_api_key('<your_key>', install = TRUE)
+#census_api_key('<your_key>')
 ```
 
-```{r, include=FALSE}
-#### Read fracking well data
-flares <- read_csv("../data/input/tx-tracts-vnf-nightly.csv")
+```{r}
+## Read particles data
+dispersion <- lapply(2015:2020, 
+                     function(y) read_rds(paste0("../data/output/polygon_parcels_", 
+                                                y, ".rds")))
+dispersion <- bind_rows(dispersion)
 
-flares %<>%
-  mutate(STATEFP = as.character(STATEFP), 
-         #COUNTYFP = as.character(COUNTYFP), 
-         #TRACTCE = as.character(TRACTCE),
-         GEOID = as.character(GEOID), 
+dispersion %<>%
+  rename(GEOID = id, 
+         date = start_day) %>% 
+  mutate(parcels = count * weight, 
          year = year(date), 
          month = month(date))
 ```
@@ -82,6 +85,17 @@ tract_acs %<>%
 ```
 
 ```{r, include=FALSE}
+#### join tracts and particles
+# all particles GEOIDs in shapefile
+# sum(!particles$GEOID %in% tracts_sf$GEOID)
+
+tracts_sf %<>% 
+  left_join(dispersion %>% 
+              group_by(GEOID) %>% 
+              summarise(tot_parcels = sum(parcels)))
+```
+
+```{r, include=FALSE}
 #### join tracts and population
 # all shapefile GEOIDs in acs query
 # sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
@@ -106,7 +120,7 @@ tracts_sf %<>%
   mutate(fips = paste0(STATEFP, COUNTYFP))
 
 # some tracts are not listed in the cbsa file
-# unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips])
+#unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips])
 
 tracts_sf %<>% 
   left_join(cbsa) %>% 
@@ -116,16 +130,6 @@ tracts_sf %<>%
   group_by(cbsa) %>% 
   mutate(pop_cbsa = sum(pop)) %>% 
   ungroup()
-```
-
-```{r}
-# aggregate flares and join with tracts geometry
-tracts_sf %<>% 
-  left_join(
-    flares %>% 
-      group_by(GEOID) %>% 
-      summarise(tot_flares = sum(flares))
-  )
 ```
 
 ## Tract population
@@ -139,70 +143,40 @@ inhabitants
 
 ```{r}
 tracts_sf %>% 
-  mutate(flaring_event = if_else(is.na(tot_flares), F, T)) %>% 
+  mutate(parcels_event = if_else(is.na(tot_parcels), F, T)) %>% 
   ggplot() + 
-  geom_density(aes(x = pop, fill = flaring_event), alpha = 0.5)
-```
-
-```{r}
-tracts_sf %>% 
-  filter(!is.na(tot_flares)) %>% 
-ggplot() + 
-  geom_sf(aes(fill = pop), colour = NA, lwd = 0)
+  geom_density(aes(x = pop, fill = parcels_event), alpha = 0.5)
 ```
 
 ## Area per tract
 
 ```{r}
-summary(tracts_sf$area[!is.na(tracts_sf$tot_flares)]) # census tracks with zero land are water only
+summary(tracts_sf$area[!is.na(tracts_sf$tot_parcels)]) # census tracks with zero land are water only
 ```
 
 ```{r}
-tracts_sf$tot_flares[tracts_sf$area == 0]
+tracts_sf$tot_parcels[tracts_sf$area == 0] # think later how to treat these tracts
 ```
 
-
-## Daily flares
-
-A total of `r prettyNum(sum(flares$flares), big.mark = ",")` flares were reported between Jul 2015 and Dec 2020.
+## Daily parcels
 
 ```{r}
-flares %>% 
-  group_by(date) %>% 
-  summarise(flares = sum(flares)) %>% 
-ggplot() + 
-  geom_line(aes(x = date, y = flares, color = flares)) +
-  theme_cowplot() + 
-  labs(title = "Daily total flares", x = "")
-```
-
-A total of `r sprintf('%s', length(unique(flares$GEOID)))` tracts were exposed between Jul 2015 and Dec 2020 to flaring. 
-
-## No wind concentration and exposure
-
-We trace parcels of air that contain emissions of flaring events. First we consider the case where air parcels are not affected by wind, that is  emissions remain in the census tracts where flaring occurs.
-
-As a concentration measure to distinguish air parcels that are more spread in larger areas and denser in smaller areas, we divide the number of air parcels by the census track area.
-
-Specifically, we trace 100 parcels of air containing pollutants for 12 hours after any flaring event and define flaring pollution density as the number of traced parcels lingering in a track divided the census track area (in sq km2). 
-
-```{r}
-ts <- seq(min(flares$date), max(flares$date), by="day")
+ts <- seq(min(dispersion$date), max(dispersion$date), by="day")
 ts <- data.frame(date = ts)
 
-flares_daily <- list()
-for(g in unique(flares$GEOID)) {
-  flares_daily[[g]] <- ts %>% 
-    left_join(flares %>% 
+dispersion_daily <- list()
+for(g in unique(dispersion$GEOID)) {
+  dispersion_daily[[g]] <- ts %>% 
+    left_join(dispersion %>% 
                 filter(GEOID == g) %>% 
-                select(date, flares)) %>% 
+                select(date, parcels)) %>% 
     mutate(GEOID = g, 
-           flares = if_else(is.na(flares), 0, flares))
+           flares = if_else(is.na(parcels), 0, parcels))
 }
-flares_daily <- bind_rows(flares_daily)
+dispersion_daily <- bind_rows(dispersion_daily)
 
 # recover population and area from tracts and add to flares data
-flares_daily %<>% 
+dispersion_daily %<>% 
   left_join(
     tracts_sf %>% 
       st_drop_geometry() %>% 
@@ -210,13 +184,13 @@ flares_daily %<>%
     )
 
 # compute density measure
-flares_daily %<>% 
+dispersion_daily %<>% 
   mutate(parcels = flares * 12 * 100, 
          density = parcels / area)
 ```
 
 ```{r}
-flares_daily %>% 
+dispersion_daily %>% 
   mutate(year = year(date), 
          month = month(date)) %>% 
   group_by(year, month) %>% 
@@ -231,8 +205,8 @@ flares_daily %>%
 ```
 
 ```{r}
-# define flares_years
-flares_years <- flares_daily %>% 
+# define dispersion_years
+dispersion_years <- dispersion_daily %>% 
   mutate(year = year(date)) %>% 
   group_by(year, GEOID, pop) %>% 
   summarise(tot_density = sum(density), 
@@ -242,29 +216,27 @@ flares_years <- flares_daily %>%
   mutate(concentration = mean_density / max(mean_density) * 100, 
          exposure = concentration / 100 * pop)
 
-summary(flares_years$tot_density)
-summary(flares_years$mean_density)
-summary(flares_years$median_density)
-summary(flares_years$concentration)
-summary(flares_years$exposure)
+summary(dispersion_years$tot_density)
+summary(dispersion_years$mean_density)
+summary(dispersion_years$median_density)
+summary(dispersion_years$concentration)
+summary(dispersion_years$exposure)
 ```
 
 ```{r}
-ggplot(flares_years) + 
+ggplot(dispersion_years) + 
   geom_histogram(aes(x = concentration))
 ```
 
 ```{r}
-ggplot(flares_years) + 
+ggplot(dispersion_years) + 
   geom_histogram(aes(x = exposure))
 ```
 
-Census tract boundaries are defined in such a way that their population averages 4,000 residents, therefore per tract measurements are loosely population normalized measures. As such, the concentration score per tract translates broadly to a score per 4,000 residents. Between 2016 and 2020 the median concentration scores per track increased from 0.3 to 3, that is the median exposure of the population increased 10 times.
-
 ```{r}
-tapply(flares_years$concentration, flares_years$year, summary)
+tapply(dispersion_years$concentration, dispersion_years$year, summary)
 
-flares_years %>% 
+dispersion_years %>% 
   filter(year > 2015) %>% 
   ggplot() +
   geom_boxplot(aes(x = as.factor(year), y = concentration)) + 
@@ -272,18 +244,8 @@ flares_years %>%
 ```
 
 ```{r}
-tapply(flares_years$exposure, flares_years$year, summary)
-
-flares_years %>% 
-  filter(year > 2015) %>% 
-  ggplot() +
-  geom_boxplot(aes(x = as.factor(year), y = exposure)) + 
-  scale_y_sqrt()
-```
-
-```{r}
 tracts_sf %<>% 
-    left_join(flares_years %>% 
+    left_join(dispersion_years %>% 
                 group_by(GEOID) %>% 
                 summarise(mean_concentr = mean(concentration), 
                           mean_exposure = mean(exposure)))
