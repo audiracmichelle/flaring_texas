@@ -13,8 +13,8 @@ parser$add_argument("-w", "--wkdir", default=NULL,
 args = parser$parse_args()
 
 # args=list()
-# args$year = as.integer(2019)
-# args$n_chunks = as.integer(20)
+# args$year = as.integer(2015)
+# args$n_chunks = as.integer(100)
 # args$chunk = 1
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
@@ -79,6 +79,11 @@ for(c in 1:(length(chunk_seq) - 1)) {
                              mc.cores = mc.cores)
   })
   
+  # polygon_parcels %>% 
+  #   group_by(source, start_day, start_hour) %>% 
+  #   summarise(parcels = sum(count)) %>% 
+  #   pull(parcels)
+  
   if(!dir.exists(file.path(ziplink_dir, args$year)))
     dir.create(file.path(ziplink_dir, args$year))
   output_file <- file.path(ziplink_dir, 
@@ -91,9 +96,20 @@ for(c in 1:(length(chunk_seq) - 1)) {
   
   write.fst(polygon_parcels, output_file)
 
-  cat(paste0("polygon_parcels_", 
-             args$year, "_", 
-             args$n, "_",
-             args$c, "_",
-             c, "\n"), file = "flag.txt", append = TRUE)
+  # cat(paste0("polygon_parcels_", 
+  #            args$year, "_", 
+  #            args$n, "_",
+  #            args$c, "_",
+  #            c, "\n"), file = "flag.txt", append = TRUE)
 }
+
+files <- file.path(file.path(ziplink_dir, args$year), 
+                   list.files(file.path(ziplink_dir, args$year)))
+polygon_parcels <- lapply(files, function(x) read.fst(x))
+polygon_parcels <- rbindlist(polygon_parcels)
+write_rds(polygon_parcels, 
+          file.path(args$wkdir, 
+                    "./data/output/",  
+                    paste0("polygon_parcels_", 
+                           args$year, ".rds"))
+          )
