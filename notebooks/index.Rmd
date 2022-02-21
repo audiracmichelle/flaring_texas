@@ -1,0 +1,12 @@
+---
+title: "Flares Texas"
+author: "Michelle Audirac"
+site: bookdown::bookdown_site
+documentclass: book
+output:
+  bookdown::gitbook: default
+---
+
+# Flares Texas
+
+Previous studies have identified associations of negative health outcomes in populations within a circular radius from flaring events. A recent study provides evidence of adverse effects in all-cause mortality of elderly due to downwind-exposure to flaring. There is compounding evidence of the long term exposure to flaring pollution, both in the proximity (distance weighted) and accounting for monthly prevailing wind direction. We look at exact trajectories and quantify the dispersion of air parcels within 12 hours from flaring sources. The focus is on the concentration of rapidly spreading air-parcels carrying airborne pollutants emitted during flaring. 
