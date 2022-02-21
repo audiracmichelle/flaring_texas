@@ -1,0 +1,520 @@
+<metadata>
+	<idinfo>
+		<citation>
+			<citeinfo>
+				<pubdate>20130626</pubdate>
+				<title>National Oil and Gas Assessment Province Boundaries through 2012</title>
+				<geoform>Downloadable GIS Data</geoform>
+			</citeinfo>
+		</citation>
+		<descript>
+			<abstract>The USGS Central Region Energy Team assesses oil and gas resources of the United States. The onshore and State water areas of the United States comprise 71 provinces. Within these provinces, Total Petroleum Systems are defined and Assessment Units are defined and assessed. Each of province is defined geologically, and most province boundaries are defined by major geologic changes. This dataset is a compilation of data that has been studied and published separately, and in some cases adjacent provinces do not share a common boundary. As a consequence, there are numerous gaps and overlaps in this layer.</abstract>
+			<purpose>This dataset illustrate the geologic boundaries of provinces as defined for National Oil and Gas Resource Assessment Project from 1995 throug 2012. </purpose>
+		</descript>
+		<timeperd>
+			<timeinfo>
+				<rngdates>
+					<begdate>19950101</begdate>
+					<enddate>20130626</enddate>
+				</rngdates>
+			</timeinfo>
+			<current>publication date</current>
+		</timeperd>
+		<status>
+			<progress>In work</progress>
+			<update>As needed</update>
+		</status>
+		<spdom>
+			<bounding>
+				<westbc>-180</westbc>
+				<eastbc>-66.885082</eastbc>
+				<northbc>71.439286</northbc>
+				<southbc>24.396309</southbc>
+			</bounding>
+		</spdom>
+		<keywords>
+			<theme>
+				<themekt>None</themekt>
+				<themekey>Earth Science</themekey>
+				<themekey>Oil</themekey>
+				<themekey>U.S. Geological Survey</themekey>
+				<themekey>Natural Gas</themekey>
+				<themekey>National Oil and Gas Assessment</themekey>
+				<themekey>Energy Resources</themekey>
+				<themekey>Natural Resources</themekey>
+				<themekey>Province Boundary</themekey>
+				<themekey>Resource Assessment</themekey>
+				<themekey>Sedimentary Basin</themekey>
+				<themekey>USGS</themekey>
+				<themekey>Geology</themekey>
+			</theme>
+			<theme>
+				<themekt>ISO 19115 Topic Categories</themekt>
+				<themekey>geoscientificInformation</themekey>
+				<themekey>oceans</themekey>
+			</theme>
+			<place>
+				<placekt>USGS Oil and Gas Provinces</placekt>
+				<placekey>Eastern Great Basin</placekey>
+				<placekey>Raton Basin - Sierra Grande Uplift</placekey>
+				<placekey>Northern Coastal</placekey>
+				<placekey>Sonoma - Livermore Basin</placekey>
+				<placekey>Salina Basin</placekey>
+				<placekey>Montana Thrust Belt</placekey>
+				<placekey>Uinta - Piceance Basin</placekey>
+				<placekey>East Texas Basin</placekey>
+				<placekey>Las Animas Arch</placekey>
+				<placekey>Cherokee Platform</placekey>
+				<placekey>Western Gulf</placekey>
+				<placekey>Northern Alaska</placekey>
+				<placekey>Forest City Basin</placekey>
+				<placekey>Wind River Basin</placekey>
+				<placekey>Northern Arizona</placekey>
+				<placekey>Southern Oklahoma</placekey>
+				<placekey>Powder River Basin</placekey>
+				<placekey>Southern Alaska</placekey>
+				<placekey>Arkoma Basin</placekey>
+				<placekey>Los Angeles Basin</placekey>
+				<placekey>Big Horn Basin</placekey>
+				<placekey>Salton Trough</placekey>
+				<placekey>Nemaha Uplift</placekey>
+				<placekey>Central Coastal</placekey>
+				<placekey>Florida Peninsula</placekey>
+				<placekey>Paradox Basin</placekey>
+				<placekey>Sioux Arch</placekey>
+				<placekey>Black Warrior Basin</placekey>
+				<placekey>Eastern Oregon - Washington</placekey>
+				<placekey>Santa Maria Basin</placekey>
+				<placekey>Wyoming Thrust Belt</placekey>
+				<placekey>Ventura Basin</placekey>
+				<placekey>Albuquerque - Santa Fe Rift</placekey>
+				<placekey>Cincinnati Arch</placekey>
+				<placekey>Sacramento Basin</placekey>
+				<placekey>New England</placekey>
+				<placekey>North-Central Montana</placekey>
+				<placekey>Superior</placekey>
+				<placekey>San Juan Basin</placekey>
+				<placekey>Williston Basin</placekey>
+				<placekey>San Diego - Oceanside</placekey>
+				<placekey>Western Oregon - Washington</placekey>
+				<placekey>Pedernal Uplift</placekey>
+				<placekey>Louisiana-Mississippi Salt Basins</placekey>
+				<placekey>Southwestern Wyoming</placekey>
+				<placekey>Michigan Basin</placekey>
+				<placekey>Southern Arizona - Southwestern New Mexico</placekey>
+				<placekey>Western Great Basin</placekey>
+				<placekey>Adirondack Uplift</placekey>
+				<placekey>Appalachian Basin</placekey>
+				<placekey>Palo Duro Basin</placekey>
+				<placekey>Southwest Montana</placekey>
+				<placekey>Permian Basin</placekey>
+				<placekey>Sedgwick Basin</placekey>
+				<placekey>Piedmont</placekey>
+				<placekey>Illinois Basin</placekey>
+				<placekey>Cambridge Arch - Central Kansas Uplift</placekey>
+				<placekey>Klamath - Sierra Nevada</placekey>
+				<placekey>Marathon Thrust Belt</placekey>
+				<placekey>Denver Basin</placekey>
+				<placekey>Blue Ridge Thrust Belt</placekey>
+				<placekey>Iowa Shelf</placekey>
+				<placekey>San Joaquin Basin</placekey>
+				<placekey>Anadarko Basin</placekey>
+				<placekey>South-Central New Mexico</placekey>
+				<placekey>Idaho - Snake River Downwarp</placekey>
+				<placekey>Central Alaska</placekey>
+				<placekey>Bend Arch - Fort Worth Basin</placekey>
+				<placekey>Park Basins</placekey>
+				<placekey>Atlantic Coastal Plain</placekey>
+				<placekey>Ozark Uplift</placekey>
+				<placekey>Hanna, Laramie, Shirley Basins</placekey>
+			</place>
+			<place>
+				<placekt>None</placekt>
+				<placekey>United States</placekey>
+			</place>
+		</keywords>
+		<accconst>None</accconst>
+		<useconst>Several of the re-assessed provinces in the rocky mountain area are significantly modified from the 1995 boundary, some of these create overlaps and gaps with neighboring provinces. Users are advised to bear this in mind when using this dataset for analytical purposes.</useconst>
+		<ptcontac>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>U.S. Geological Survey, Central Region Energy Team</cntorg>
+					<cntper>Christopher J. Schenk</cntper>
+				</cntorgp>
+				<cntpos>National Oil and Gas Assessment Project Chief</cntpos>
+				<cntaddr>
+					<addrtype>mailing and physical</addrtype>
+					<address>U.S. Geological Survey Box 25046, MS 939</address>
+					<city>Denver</city>
+					<state>Colorado</state>
+					<postal>80225-0046</postal>
+					<country>US</country>
+				</cntaddr>
+				<cntvoice>(303) 236-5796</cntvoice>
+				<cntemail>schenk@usgs.gov</cntemail>
+			</cntinfo>
+		</ptcontac>
+		<native>ArcGIS 10</native>
+	</idinfo>
+	<dataqual>
+		<lineage>
+			<srcinfo>
+				<srccite>
+					<citeinfo>
+						<origin>U.S. Geological Survey</origin>
+						<origin>Obuch, R.C. (compiler)</origin>
+						<origin>Brewton, J.D. (compiler)</origin>
+						<origin>Beeman, W.R. (compiler)</origin>
+						<pubdate>19960101</pubdate>
+						<title>Digital Map Data, Text, and Graphical Images in Support of the 1995 National Assessment of United States Oil and Gas Resources</title>
+						<geoform>vector digital data</geoform>
+						<serinfo>
+							<sername>U.S. Geological Survey Digital Data Series</sername>
+							<issue>DDS-35</issue>
+						</serinfo>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga95/natl/spatial/shape/pr_natlg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srctime>
+					<timeinfo>
+						<sngdate>
+							<caldate>19960101</caldate>
+						</sngdate>
+					</timeinfo>
+					<srccurr>publication date</srccurr>
+				</srctime>
+				<srccitea>USGS DDS-35</srccitea>
+				<srccontr>1995 Assessment Boundaries were originally published from USGS DDS-35</srccontr>
+			</srcinfo>
+			<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Eastern Great Basin Province (5019) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov190/spatial/shape/pr19bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2005 Eastern Great Basin Assessment Boundary</srccitea>
+				<srccontr>The 2005 Assesment boundary replaced the 1995 assessment boundary for the Eastern Great Basin Province (5019)</srccontr>
+			</srcinfo>
+
+			<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Uinta-Piceance Province (5020) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov20/spatial/shape/pr20bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2002 Uinta-Piceance Province Assessment Boundary</srccitea>
+				<srccontr>The 2002 Assesment boundary replaced the 1995 assessment boundary for the Uinta-Piceance Province (5020)</srccontr>
+			</srcinfo>
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - San Juan Basin Province (5022) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov22/spatial/shape/pr22bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2002 San Juan Basin Province Assessment Boundary</srccitea>
+				<srccontr>The 2002 Assesment boundary replaced the 1995 assessment boundary for San Juan Basin Province (5022)</srccontr>
+			</srcinfo>
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Hanna, Laramie, Shirley Basins Province (5030) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov30/spatial/shape/pr30bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2005 Hanna, Laramie, Shirley Basins Province Assessment Boundary</srccitea>
+				<srccontr>The 2005 Assesment boundary replaced the 1995 assessment boundary for Hanna, Laramie, Shirley Basins Province (5030)</srccontr>
+			</srcinfo>
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Powder River Basin Province (5033) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov33/spatial/shape/pr33bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2002 Powder River Basin Province Assessment Boundary</srccitea>
+				<srccontr>The 2002 Assesment boundary replaced the 1995 assessment boundary for Powder River Basin Province (5033)</srccontr>
+			</srcinfo>
+
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Bighorn Basin Province (5034) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov34/spatial/shape/pr34bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2008 Bighorn Basin Province Assessment Boundary</srccitea>
+				<srccontr>The 2008 Assesment boundary replaced the 1995 assessment boundary for Bighorn Basin Province (5034)</srccontr>
+			</srcinfo>
+
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Wind River Basin Province (5035) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov35/spatial/shape/pr35bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2005 Wind River Basin Province Assessment Boundary</srccitea>
+				<srccontr>The 2005 Assesment boundary replaced the 1995 assessment boundary for Wind River Basin Province (5035)</srccontr>
+			</srcinfo>
+
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Wyoming Thrust Belt Province (5036) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov36/spatial/shape/pr36bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2003 Wyoming Thrust Belt Province Assessment Boundary</srccitea>
+				<srccontr>The 2003 Assesment boundary replaced the 1995 assessment boundary for Wyoming Thrust Belt Province (5036)</srccontr>
+			</srcinfo>
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Southwestern Wyoming Province (5037) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov36/spatial/shape/pr37bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2002 Southwestern Wyoming Province Assessment Boundary</srccitea>
+				<srccontr>The 2002 Assesment boundary replaced the 1995 assessment boundary for Southwestern Wyoming Province (5037)</srccontr>
+			</srcinfo>
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Gulf Coast Provinces (5047, 5048, 5049) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/gulf/gulflib/spatial/shape/gcprovsg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>Gulf Coast Provinces Assessment Boundary</srccitea>
+				<srccontr>The Gulf Coast Provinces Assesment boundary replaced the 1995 assessment boundary.  It was built as a merge of three 1995-assesment provinces (5047, 5048, 5049)</srccontr>
+			</srcinfo>
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Illinois Basin Province (5064) Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov64/spatial/shape/pr64bndg.zip</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2007 Illinois Basin Province Assessment Boundary</srccitea>
+				<srccontr>The 2007 Assesment boundary replaced the 1995 assessment boundary for Illinois Basin Province (5064)</srccontr>
+			</srcinfo>
+ 
+
+<srcinfo>
+				<srccite>
+					<citeinfo>
+						<title>National Assessment of Oil and Gas Project - Piedmont, Blue Ridge Thrust Belt, Atlantic Coastal Plain, and New England Provinces Boundary</title>
+						<geoform>Downloadable GIS Data</geoform>
+						<onlink>http://certmapper.cr.usgs.gov/data/noga00/prov70/spatial/shape/pr7000g.zip
+</onlink></citeinfo>
+				</srccite>
+				<typesrc>online</typesrc>
+				<srccitea>2012 Piedmont, Blue Ridge Thrust Belt, Atlantic Coastal Plain, and New England Provinces Assessment Boundary</srccitea>
+				<srccontr>The Piedmont, Blue Ridge Thrust Belt, Atlantic Coastal Plain, and New England Provinces Boundary replaced the 1995 assessment boundary.  It was built as a merge of four 1995-assesment provinces (5068, 5069, 5070, 5072).</srccontr>
+			</srcinfo>
+
+
+
+			<procstep>
+				<procdesc>1995 Oil and Gas Assessment Province data was copied.  Coded all provinces that were assessed into the 'STATUS' column.</procdesc>
+				<procdate>1/1/1996</procdate>
+			</procstep>
+			<procstep><procdesc>As new provinces were assessed, updated geometry and attributes were appended to the dataset and previous province geometry was removed.  No effort was made to 'match' overlaps and gaps between provinces.  The 'SOURCE' column was populated with of the data source for the geometry.  If the geometry was unchanged, '1995 Assessment Boundary' is indicated.  If the geometry was modified, it was noted in the SOURCE column.  In two cases, recent assessments merged more than one 1995 province, which is also noted in the SOURCE column.</procdesc><procdate>1/1/2000 through 12/12/2012</procdate></procstep></lineage>
+		<logic>
+As new provinces were assessed, updated geometry and attributes were appended to the dataset.  No effort was made to 'match' overlaps and gaps between provinces.   Added in the 'SOURCE' column annotation of the data source for the geometry.  If the geometry was unchanged, '1995 Assessment Boundary' is indicated.  If the geometry was modified, it was noted in the SOURCE column .  In two cases, recent assessments merged more than one 1995 province, which is also noted in the SOURCE column.</logic></dataqual>
+	<spdoinfo>
+		<direct>Vector</direct>
+		<ptvctinf>
+			<sdtsterm>
+				<sdtstype>GT-polygon composed of chains</sdtstype>
+				<ptvctcnt>67</ptvctcnt>
+			</sdtsterm>
+		</ptvctinf>
+	</spdoinfo>
+	<spref>
+		<horizsys>
+			<geograph>
+				<latres>1.7763568394002568e-013</latres>
+				<longres>1.7763568394002568e-013</longres>
+				<geogunit>Decimal Degrees</geogunit>
+			</geograph>
+			<geodetic>
+				<horizdn>D WGS 1984</horizdn>
+				<ellips>WGS 1984</ellips>
+				<semiaxis>6378137.0</semiaxis>
+				<denflat>298.257223563</denflat>
+			</geodetic>
+		</horizsys>
+	</spref>
+	<eainfo>
+		<detailed>
+			<enttyp>
+				<enttypl>U.S. Geological Survey US Oil and Gas Assessment Province Boundaries</enttypl>
+				<enttypd>Polygon Attribute Table</enttypd>
+				<enttypds>U.S. Geological Survey Central Energy Resource Science Center</enttypds>
+			</enttyp>
+			<attr>
+				<attrlabl>OBJECTID</attrlabl>
+				<attrdef>Internal feature number.</attrdef>
+				<attrdefs>ESRI</attrdefs>
+				<attrdomv>
+					<udom>Sequential unique whole numbers that are automatically generated.</udom>
+				</attrdomv>
+			</attr>
+			<attr>
+				<attrlabl>SHAPE</attrlabl>
+				<attrdef>Feature geometry.</attrdef>
+				<attrdefs>ESRI</attrdefs>
+				<attrdomv>
+					<udom>Coordinates defining the features.</udom>
+				</attrdomv>
+			</attr>
+			<attr>
+				<attrlabl>PROVCODE</attrlabl>
+				<attrdef>Province code, a 4 character value enumerating Oil and Gas Assessment provinces.</attrdef>
+				<attrdefs>U.S. Geological Survey Energy Resource Provinces</attrdefs>
+			</attr>
+			<attr>
+				<attrlabl>PROVNAME</attrlabl>
+				<attrdef>Name of the Province</attrdef>
+				<attrdefs>U.S. Geological Survey Energy Resource Provinces</attrdefs>
+			</attr>
+			<attr>
+				<attrlabl>STATUS</attrlabl>
+				<attrdef>The latest assessment status of the province.  If the province has had one or more oil and gas assessment, it is labeled 'Assessed', if it has not, then it is labeled 'Not quantitatively assessed'.  </attrdef>
+			</attr>
+			<attr>
+				<attrlabl>LASTUPD</attrlabl>
+				<attrdef>This represents the approximate date of the latest assessment information for each province.   In some cases, this is accurate to the day that a publication describing the assessment is released, in others it may only be accurate to the year, in which case January 1 is used.  It is recommended that users only rely on the year portion of this date for future analysis.</attrdef>
+			</attr>
+			<attr>
+				<attrlabl>SOURCE</attrlabl>
+				<attrdef>This field describes the source of the province geometry.  The original source for all provinces was the 1995 National Oil and Gas assessment.  Many provinces have been assessed after this process, and some of the assessment geologists have modified the province boundary.  If the geometry was modified this field will indicate the assessment year that it was released.  In two cases, the geometry source reflects where multiple 1995 province boundaries were merged into a single province.</attrdef>
+			</attr>
+			<attr>
+				<attrlabl>SHAPE_Length</attrlabl>
+				<attrdef>Length of feature in internal units.</attrdef>
+				<attrdefs>ESRI</attrdefs>
+				<attrdomv>
+					<udom>Positive real numbers that are automatically generated.</udom>
+				</attrdomv>
+			</attr>
+			<attr>
+				<attrlabl>SHAPE_Area</attrlabl>
+				<attrdef>Area of feature in internal units squared.</attrdef>
+				<attrdefs>ESRI</attrdefs>
+				<attrdomv>
+					<udom>Positive real numbers that are automatically generated.</udom>
+				</attrdomv>
+			</attr>
+		</detailed>
+		<overview><eaover>A 4-digit province code (PROVCODE) is assigned to each province, for the United States, provinces start at 5001 and increment to 5071, with a handful of gaps.  [PROVNAME] indicates the name of the province.  [STATUS] describes if the province has been assessed by the USGS for undiscovered oil and gas resources. [LASTUPD] indicated the year, and, at times, day and month, of the latest assessment of the province.  [SOURCE] describes the source of the geometry of the province.  In some cases, the province boundary was updated from assessments after 1995.</eaover></overview></eainfo>
+	<distinfo>
+		<distrib>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>USGS Information Services</cntorg>
+				</cntorgp>
+				<cntaddr>
+					<addrtype>mailing address</addrtype>
+					<address>Box 25286 Denver Federal Center</address>
+					<city>Denver</city>
+					<state>Colorado</state>
+					<postal>80225</postal>
+					<country>USA</country>
+				</cntaddr>
+				<cntvoice>1-888-ASK-USGS</cntvoice>
+				<cntfax>303.202.4693</cntfax>
+				<cntemail>ask@usgs.gov</cntemail>
+			</cntinfo>
+		</distrib>
+		<resdesc>Downloadable DAta</resdesc>
+		<distliab>Although the data has been processed on the computer system at the U.S. Geological Survey, U.S. Department of the Interior, no warranty, expressed or implied, is made by the Geological Survey regarding the utility of the data on any other system, nor shall the act of distribution constitute any such warranty.</distliab>
+		<stdorder>
+			<digform>
+				<digtinfo>
+					<formname>Shapefile</formname>
+					<formcont>
+Shapefile containing US Oil and Gas Assessment Province Boundaries
+</formcont>
+					<filedec>unzip</filedec>
+				</digtinfo>
+				<digtopt>
+					<onlinopt>
+						<computer>
+							<networka>
+								<networkr>http://certmapper.cr.usgs.gov/data/noga00/natl/spatial/shape/usprov12.zip</networkr>
+							</networka>
+						</computer>
+					</onlinopt>
+				</digtopt>
+			</digform>
+			<digform>
+				<digtinfo>
+					<formname>ESRI Geodatabase, zip compressed</formname>
+					<formcont>
+ESRI Geodatabase containing US Oil and Gas Assessment Province Boundaries
+</formcont>
+					<filedec>unzip</filedec>
+				</digtinfo>
+				<digtopt>
+					<onlinopt>
+						<computer>
+							<networka>
+								<networkr>http://certmapper.cr.usgs.gov/data/noga00/natl/spatial/geodatabase/usprov12gdb.zip</networkr>
+							</networka>
+						</computer>
+					</onlinopt>
+				</digtopt>
+			</digform>
+		</stdorder>
+	</distinfo>
+	<metainfo>
+		<metd>20010411</metd>
+		<metrd>2013</metrd>
+		<metc>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>U.S. Geological Survey, Central Energy Team</cntorg>
+					<cntper>Christopher C Skinner</cntper>
+				</cntorgp>
+				<cntpos>IT Specialist</cntpos>
+				<cntaddr>
+					<addrtype>mailing and physical</addrtype>
+					<address>U.S. Geological Survey MS939, Box 25046</address>
+					<city>Denver</city>
+					<state>Colorado</state>
+					<postal>80225</postal>
+					<country>US</country>
+				</cntaddr>
+				<cntvoice>(303) 236-1651</cntvoice>
+				<cntemail>cskinner@usgs.gov</cntemail>
+			</cntinfo>
+		</metc>
+		<metstdn>FGDC Content Standard for Digital Geospatial Metadata</metstdn>
+		<metstdv>FGDC-STD-001-1998</metstdv>
+		<mettc>local time</mettc>
+	</metainfo>
+</metadata>
