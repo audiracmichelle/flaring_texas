@@ -96,6 +96,6 @@ for(c in 1:(length(chunk_seq) - 1)) {
              args$start, "_", 
              args$end, "_", 
              args$n, "_",
-             c, "_",
+             sprintf("%03d", c), "_",
              flag, "\n"), file = "flag.txt", append = TRUE)
 }
