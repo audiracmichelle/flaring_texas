@@ -1,8 +1,8 @@
 #!/bin/sh
 #SBATCH -J run_disperser            # job name
-#SBATCH -N 4                        # number of nodes requested
+#SBATCH -N 24                        # number of nodes requested
 #SBATCH -n 24                       # total number of tasks to run in parallel
-#SBATCH -p skx-norm                  # queue (partition) 
+#SBATCH -p skx-normal                  # queue (partition) 
 #SBATCH -t 00:30:00                 # run time (hh:mm:ss) 
 
 module load launcher
