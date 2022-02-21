@@ -1,7 +1,7 @@
 n <- 100
 c <- seq(n)
 for(y in seq(2015,2020)) {
-  cat(paste("singularity exec $SCRATCH/disperser_latest.sif Rscript --vanilla jobs/run_disperser.R -y", 
+  cat(paste("singularity exec $SCRATCH/disperser_latest.sif Rscript --vanilla jobs/run_disperser/run_disperser.R -y", 
             y, 
             "-n", n, 
             "-c", c, 
