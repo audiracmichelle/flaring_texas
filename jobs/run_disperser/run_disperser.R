@@ -17,35 +17,24 @@ parser$add_argument("-w", "--wkdir", default=NULL,
 args = parser$parse_args()
 
 # args=list()
-# args$year = as.integer(2016)
+# args$year = as.integer(2015)
 # args$start = NULL
 # args$end = NULL
-# args$n_chunks = as.integer(20)
-# args$chunk = NULL
+# args$n_chunks = as.integer(100)
+# args$chunk = 1
 # args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
 ####
 # override original disperseR functions
-source("./R/run_disperser_parallel.R")
+source("./lib/run_disperser_parallel.R")
 
 #### 
 # prepare input
 
-input <- read_rds("./data/input/input.rds")
+input <- read_rds("./data/jobs_input/disperser_input.rds")
 
 input %<>% 
-  mutate(ID = GEOID, 
-         uID = GEOID, 
-         Height = 20, 
-         year = year(date), 
-         month = month(date),
-         start_day = date, 
-         duration_emiss_hours = 1,
-         duration_run_hours = 12)
-
-input %<>% 
-  filter(year == args$year, 
-         #month %in% c(1,2,3)
+  filter(year == args$year
          )
 
 #### 
@@ -110,4 +99,3 @@ for(c in 1:(length(chunk_seq) - 1)) {
              c, "_",
              flag, "\n"), file = "flag.txt", append = TRUE)
 }
-
