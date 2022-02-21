@@ -93,9 +93,10 @@ for(c in 1:(length(chunk_seq) - 1)) {
   flag <- length(grep("Error", run_log))
   cat(paste0("Flag_", 
              args$year, "_", 
-             args$start, "_", 
-             args$end, "_", 
              args$n, "_",
-             sprintf("%03d", c), "_",
+             sprintf("%03d", args$chunk), "_",
+             args$start, "_", 
+             args$end, "_",
+             c, "_",
              flag, "\n"), file = "flag.txt", append = TRUE)
 }
