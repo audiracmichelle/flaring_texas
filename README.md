@@ -13,6 +13,8 @@ docker run -p 8787:8787 -e ROOT=true -e DISABLE_AUTH=true -v $(pwd):/home/rstudi
 
 Scripts in `/jobs` run in docker containers. It is possible to test disperser interactively using a dockerized connection to Rstudio.
 
+Commands to run the jobs in a remote connection to a super computer are found in `/jobs/README.md`
+
 ## Exploring data and disperseR results
 
 * add link to notebook
