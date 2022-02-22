@@ -34,10 +34,11 @@ flares_years <- flares_data %>%
   ungroup() %>% 
   mutate(flares_concentr = flares / area)
 
-#### you can only read these as concentration within tracts where there are flares
+#### you can only read these as concentration within tracts where there are flares!!!
 ggplot(flares_years) + 
   geom_boxplot(aes(x = as.factor(year), y = flares_concentr, col = basin))
 ```
+
 
 ```{r}
 time_grid_sf <- tracts_sf %>% 
