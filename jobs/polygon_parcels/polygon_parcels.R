@@ -26,20 +26,11 @@ source("./R/polygon_parcels_parallel.R")
 #### 
 # prepare input
 
-input <- read_rds("./data/input/input.rds")
+input <- read_rds("./data/jobs_input/disperser_input.rds") 
 
 input %<>% 
-  mutate(ID = GEOID, 
-         uID = GEOID, 
-         Height = 20, 
-         year = year(date), 
-         month = month(date),
-         start_day = date, 
-         duration_emiss_hours = 1,
-         duration_run_hours = 12)
-
-input %<>% 
-  filter(year == args$year)
+  filter(year == args$year
+  )
 
 #### 
 # create dirs
