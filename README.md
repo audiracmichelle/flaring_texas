@@ -25,4 +25,3 @@ Kernel density estimation and spatial statistics notes in
 * https://bookdown.org/lexcomber/brunsdoncomber2e/Ch6.html#looking-at-marked-point-patterns
 * https://bookdown.org/lexcomber/brunsdoncomber2e/Ch6.html
 * https://www.statsref.com/HTML/index.html?car_models.html
-
