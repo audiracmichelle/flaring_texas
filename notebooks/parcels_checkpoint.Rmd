@@ -106,8 +106,8 @@ plots
 #                              sf = sf,
 #                              hysp_dir = hysp_dir,
 #                              mc.cores = mc.cores)
-# write_rds(polygon_parcels, "polygon_parcels.rds")
-polygon_parcels <- read_rds("polygon_parcels.rds")
+# write_rds(polygon_parcels, "_polygon_parcels.rds")
+polygon_parcels <- read_rds("_polygon_parcels.rds")
 
 polygon_parcels <- polygon_parcels %>% 
   rename(GEOID = id) %>% 
