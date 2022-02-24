@@ -1,1 +1,2 @@
-rmd_files: ["index.Rmd", "preprocess_data.Rmd", "flares.Rmd", "parcels_checkpoint.Rmd"]
+rmd_files: ["index.Rmd", "preprocess_data.Rmd", "flares.Rmd", "parcels_checkpoint.Rmd", "temp.Rmd"]
+output_dir: "../docs"
