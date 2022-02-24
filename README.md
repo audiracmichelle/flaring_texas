@@ -17,7 +17,7 @@ Commands to run the jobs in a remote connection to a super computer are found in
 
 ## Exploring data and disperseR results
 
-* add link to notebook
+* Supporting notebooks at [https://audiracmichelle.github.io/flaring_texas/]
 
 ## References
 
