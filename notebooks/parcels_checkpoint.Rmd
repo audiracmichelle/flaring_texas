@@ -29,7 +29,7 @@ tracts_sf <- read_rds("../data/preprocessed/tracts_sf.rds") # <- for analysis
 #### number of files disperser will create for each year month
 disperser_input %>% 
   group_by(year, month) %>% 
-  summarise(n = n()) %>% kable()
+  summarise(n = n()) %>% DT::datatable()
 ```
 
 ## check 2
