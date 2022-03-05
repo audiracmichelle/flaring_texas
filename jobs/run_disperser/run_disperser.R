@@ -77,7 +77,7 @@ pbl.height = NULL #pblheight
 species = 'so2'
 proc_dir = proc_dir
 overwrite = FALSE
-npart = 100
+npart = 300
 keep.hysplit.files = FALSE ## FALSE BY DEFAULT
 mc.cores = parallel::detectCores()
 for(c in 1:(length(chunk_seq) - 1)) {
