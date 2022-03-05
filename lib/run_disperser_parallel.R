@@ -24,6 +24,9 @@
 #'
 #' @return This function returns fac model results.
 
+##### -------- flaring_texas adaptation >>>
+# the number of particles is determined by npart and a weight that is pulled from input.refs$w 
+##### -------- flaring_texas adaptation >>>
 
 #' @export run_disperser_parallel
 
@@ -193,7 +196,7 @@ run_fac <- function(x,
         met_type = "reanalysis",
         met_dir = meteo_dir
       ) %>%
-      disperseR::run_model(npart = npart, run.dir = run_dir)
+      disperseR::run_model(npart = npart * subset$w, run.dir = run_dir) # < --- flaring_texas adaptation
 
 
     ## Extract output from the dispersion model
