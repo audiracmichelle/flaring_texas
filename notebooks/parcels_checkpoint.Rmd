@@ -9,7 +9,6 @@ library(lubridate)
 library(data.table)
 library(fst)
 library(sf)
-library(sp)
 library(gridExtra)
 library(cowplot)
 library(viridis)
@@ -17,7 +16,7 @@ library(ggthemes)
 library(knitr)
 
 disperser_input <- read_rds("../data/jobs_input/disperser_input.rds")
-sf <- st_read("../data/input/tl_2016_48_tract/tl_2016_48_tract.shp") # <- for polygon_parcel input
+polygons_sf <- st_read("../data/input/tl_2016_48_tract/tl_2016_48_tract.shp") # <- for polygon_parcel input
 tracts_sf <- read_rds("../data/preprocessed/tracts_sf.rds") # <- for analysis
 ```
 
@@ -36,13 +35,13 @@ disperser_input %>%
 
 * validate that the number of parcels that are dispersed in each simulation run are counted in the polygon_parcel function
 
-```{r, warning=F, message=F, results='hide'}
+```{r}
 #### set params for run_polygon_parcels
-sf %<>% 
+polygons_sf %<>% 
   filter(STATEFP == "48")  %>% 
-  select(GEOID) %>% 
   mutate(GEOID = as.character(GEOID)) %>% 
   rename(id = GEOID)
+polygons_sf <- polygons_sf[, 'id']
 hysp_dir = "../data/jobs_output/hysplit"
 mc.cores = parallel::detectCores()
 
@@ -51,38 +50,59 @@ range = which(disperser_input$start_day == as.Date("2018-01-06") &
 input.refs = data.table(disperser_input[range,], stringsAsFactors = FALSE)
 
 run_X <- lapply(1:nrow(input.refs), function(r) input.refs[r])
+```
 
+```{r, warning=F, message=F, results='hide'}
+res.link = 12000
+
+polygon_parcels <- list()
 parcels_count <- c()
 plots <- list()
 for(X in run_X){
-  polygon_parcels <- run_polygon_parcels(X = X, sf = sf, hysp_dir = hysp_dir)
-  parcels_count <- c(parcels_count, sum(polygon_parcels$count))
-
-  polygon_parcels <- polygon_parcels %>% 
-    rename(GEOID = id) %>% 
-    mutate(parcels = count)
+  polygon_parcels[[X$ID]] <- run_polygon_parcels(X = X, 
+                                         polygons_sf = polygons_sf, 
+                                         hysp_dir = hysp_dir, 
+                                         res.link = res.link)
+  parcels_count <- c(parcels_count, sum(polygon_parcels[[X$ID]]$count, na.rm = T))
 
   parcels_sf <- tracts_sf %>%  
-    left_join(polygon_parcels) %>% 
-    filter(!is.na(parcels)) %>% 
-    mutate(parcels_concentr = parcels / area)
+    left_join(rename(polygon_parcels[[X$ID]], GEOID = id)) %>% 
+    filter(GEOID %in% polygon_parcels[[X$ID]]$id) %>% 
+    mutate(concentration = count / area)
 
   p1 <- parcels_sf %>%  
     ggplot() + 
-    geom_sf(aes(fill = parcels), size = 0) + 
+    geom_sf(aes(fill = count), size = 0) + 
     scale_fill_viridis(option = "B") +
     theme_map() + 
-    theme(legend.position = "right")
+    theme(legend.position = "none")
 
   p2 <- parcels_sf %>% 
     ggplot() + 
-    geom_sf(aes(fill = parcels_concentr), size = 0) + 
+    geom_sf(aes(fill = concentration), size = 0) + 
     scale_fill_viridis(option = "B") +
     theme_map() + 
-    theme(legend.position = "right")
+    theme(legend.position = "none")
 
-  plots[[X$ID]] <- plot_grid(p1, p2)
+  p3 <- parcels_sf %>%  
+    ggplot() + 
+    geom_sf(aes(fill = hyads), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
+  
+  p4 <- parcels_sf %>%
+    mutate(concentr_adj = concentration / max(parcels_sf$concentration, na.rm = T),
+           hyads_adj = hyads / max(parcels_sf$hyads, na.rm = T)) %>%
+    ggplot() +
+    geom_point(aes(x=hyads_adj, y=count)) +
+    geom_point(aes(x=concentr_adj, y=count), col = "red") + 
+    labs(x = "concentration (red), hyads(black)") 
+
+  plots[[X$ID]] <- plot_grid(p1, p2, p3, p4)
 }
+
+polygon_parcels_1 <- rbindlist(polygon_parcels)
 ```
 
 ```{r}
@@ -91,248 +111,137 @@ parcels_count
 
 ## check 3
 
-* visual inspection of counts and concentrations
+* visual inspection of counts and raw concentrations and exposure estimates using two values for `res.link` the length of the grid square's sides that are used to compute hyads exposure. The first group uses `res.link=12000` and the second group `res.link=100000`.
+
+### Group 1
 
 ```{r}
 plots
 ```
 
-## check 4
-
-* inspection of counts of parcels from all locations and its concentration
+### Group 2
 
 ```{r, warning=F, message=F, results='hide'}
-# polygon_parcels <- polygon_parcels_parallel(input.refs = input.refs,
-#                              sf = sf,
-#                              hysp_dir = hysp_dir,
-#                              mc.cores = mc.cores)
-# write_rds(polygon_parcels, "_polygon_parcels.rds")
-polygon_parcels <- read_rds("_polygon_parcels.rds")
+res.link = 100000
 
-polygon_parcels <- polygon_parcels %>% 
-  rename(GEOID = id) %>% 
-  group_by(GEOID) %>% 
-  summarise(parcels = sum(count), 
-            weighted_parcels = sum(count * weight))
+polygon_parcels <- list()
+parcels_count <- c()
+plots <- list()
+for(X in run_X){
+  polygon_parcels[[X$ID]] <- run_polygon_parcels(X = X, 
+                                         polygons_sf = polygons_sf, 
+                                         hysp_dir = hysp_dir, 
+                                         res.link = res.link)
+  parcels_count <- c(parcels_count, sum(polygon_parcels[[X$ID]]$count, na.rm = T))
 
-parcels_sf <- tracts_sf %>%  
-    left_join(polygon_parcels) %>% 
-    filter(!is.na(parcels)) %>% 
-    mutate(parcels_concentr = parcels / area, 
-           weighted_parcels_concentr = weighted_parcels / area)
+  parcels_sf <- tracts_sf %>%  
+    left_join(rename(polygon_parcels[[X$ID]], GEOID = id)) %>% 
+    filter(GEOID %in% polygon_parcels[[X$ID]]$id) %>% 
+    mutate(concentration = count / area)
 
-p1 <- parcels_sf %>%  
-  ggplot() + 
-  geom_sf(aes(fill = parcels), size = 0) + 
-  scale_fill_viridis(option = "B") +
-  theme_map() + 
-  theme(legend.position = "right")
+  p1 <- parcels_sf %>%  
+    ggplot() + 
+    geom_sf(aes(fill = count), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
 
-p2 <- parcels_sf %>% 
-  ggplot() + 
-  geom_sf(aes(fill = parcels_concentr), size = 0) + 
-  scale_fill_viridis(option = "B") +
-  theme_map() + 
-  theme(legend.position = "right")
+  p2 <- parcels_sf %>% 
+    ggplot() + 
+    geom_sf(aes(fill = concentration), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
 
-plot_grid(p1, p2, nrow = 2)
+  p3 <- parcels_sf %>%  
+    ggplot() + 
+    geom_sf(aes(fill = hyads), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
+  
+  p4 <- parcels_sf %>%
+    mutate(concentr_adj = concentration / max(parcels_sf$concentration, na.rm = T),
+           hyads_adj = hyads / max(parcels_sf$hyads, na.rm = T)) %>%
+    ggplot() +
+    geom_point(aes(x=hyads_adj, y=count)) +
+    geom_point(aes(x=concentr_adj, y=count), col = "red") + 
+    labs(x = "concentration (red), hyads(black)") 
+
+  plots[[X$ID]] <- plot_grid(p1, p2, p3, p4)
+}
+polygon_parcels_2 <- rbindlist(polygon_parcels)
+
+plots
 ```
 
-The issue blows up with `weighted_parcels_concentr`. Unintentionally, by throwing randomn grids and then overlapping with the administrative boundaries, disperseR induces some sort of density estimation (similar to KDE kernel density estimation?)
+## check 4
 
+* inspection of counts of parcels from all locations, its concentration, and hyads exposure in a single day. Group 1 and 2 use different grid resolutions, `res.link=12000` and `res.link=100000`.
 
-<!-- # daily_comparison -->
+```{r, warning=F, message=F, results='hide'}
+flares_sf <- tracts_sf %>%  
+  left_join(rename(input.refs, GEOID = ID)) %>% 
+  filter(GEOID %in% disperser_input$ID)
 
-<!-- ```{r setup, include=FALSE} -->
-<!-- knitr::opts_chunk$set(echo = F) -->
-<!-- ``` -->
+p1 <- flares_sf %>% 
+  ggplot() + 
+  geom_sf(aes(fill = flares), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
 
-<!-- ```{r, include=FALSE} -->
-<!-- library(tidyverse) -->
-<!-- library(magrittr) -->
-<!-- library(lubridate) -->
-<!-- library(sf) -->
-<!-- library(maps) -->
-<!-- library(gridExtra) -->
-<!-- library(cowplot) -->
-<!-- library(RColorBrewer) -->
-<!-- library(ggthemes) -->
-<!-- library(tidycensus) -->
-<!-- library(viridis) -->
-<!-- #### include your census api key -->
-<!-- #census_api_key('<your_key>', install = TRUE) -->
-<!-- ``` -->
+polygon_parcels <- polygon_parcels_1
 
-<!-- ```{r, include=FALSE} -->
-<!-- #### Read fracking well data -->
-<!-- flares <- read_csv("../data/input/tx-tracts-vnf-nightly.csv") -->
+polygon_parcels %<>% 
+  group_by(id, weight, source) %>% 
+  summarise(count = weight * sum(count, na.rm = T), 
+            hyads = weight * hyads)
 
-<!-- flares %<>% -->
-<!--   mutate(STATEFP = as.character(STATEFP),  -->
-<!--          #COUNTYFP = as.character(COUNTYFP),  -->
-<!--          #TRACTCE = as.character(TRACTCE), -->
-<!--          GEOID = as.character(GEOID),  -->
-<!--          year = year(date),  -->
-<!--          month = month(date)) -->
+parcels_sf <- tracts_sf %>%  
+  left_join(rename(polygon_parcels, GEOID = id)) %>% 
+  filter(GEOID %in% polygon_parcels$id) %>% 
+  mutate(concentration = weight * count / area)
 
-<!-- length(unique(flares$GEOID)) -->
-<!-- summary(flares$flares) -->
-<!-- ``` -->
+p2 <- parcels_sf %>%  
+  ggplot() + 
+  geom_sf(aes(fill = count), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
 
-<!-- ```{r} -->
-<!-- ## Read particles data -->
-<!-- dispersion <- lapply(2015:2020,  -->
-<!--                      function(y) read_rds(paste0("../data/output/polygon_parcels_",  -->
-<!--                                                 y, ".rds"))) -->
-<!-- dispersion <- bind_rows(dispersion) -->
+p3 <- parcels_sf %>% 
+  ggplot() + 
+  geom_sf(aes(fill = concentration), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
 
-<!-- length(unique(dispersion$id)) -->
-<!-- summary(dispersion$count) -->
-<!-- ``` -->
+p4 <- parcels_sf %>%  
+  ggplot() + 
+  geom_sf(aes(fill = hyads), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
 
-<!-- ```{r, include=FALSE} -->
-<!-- #### read state shapefile -->
-<!-- states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE)) -->
-<!-- crs_ <- st_crs(states_sf) -->
-<!-- ``` -->
+polygon_parcels <- polygon_parcels_2
 
-<!-- <!-- ```{python} --> -->
-<!-- <!-- import wget --> -->
-<!-- <!-- from zipfile import ZipFile --> -->
-<!-- <!-- import os --> -->
+polygon_parcels %<>% 
+  group_by(id, weight, source) %>% 
+  summarise(count = weight * sum(count, na.rm = T), 
+            hyads = weight * hyads)
 
-<!-- <!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' --> -->
-<!-- <!-- wget.download(url, os.path.expanduser('~/tmp')) --> -->
-<!-- <!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') --> -->
-<!-- <!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) --> -->
-<!-- <!-- os.system("ls ~/tmp/tl_2016_48_tract/") --> -->
-<!-- <!-- ``` --> -->
+parcels_sf <- tracts_sf %>%  
+  left_join(rename(polygon_parcels, GEOID = id)) %>% 
+  filter(GEOID %in% polygon_parcels$id) %>% 
+  mutate(concentration = weight * count / area)
 
-<!-- ```{r, include=FALSE} -->
-<!-- #### read tracts shapefile -->
-<!-- tracts_sf <- st_read("../data/input/tl_2016_48_tract/tl_2016_48_tract.shp") -->
-<!-- tracts_sf %<>%  -->
-<!--   dplyr::filter(STATEFP == "48") %>%  -->
-<!--   mutate(area = ALAND / 1e6) #ALAND in tiger filers is reported in sq meters -->
-<!-- tracts_sf <- st_transform(tracts_sf, crs_) -->
-<!-- ``` -->
-
-<!-- ```{r, include=FALSE} -->
-<!-- #### get tracts population -->
-<!-- v18 <- load_variables(2018, "acs5", cache = TRUE) -->
-<!-- # View(v18) -->
-
-<!-- # Estimate!!Total -->
-<!-- tract_acs <- get_acs(year = 2018, -->
-<!--                      geography = "tract", -->
-<!--                      variables = "B01001_001", -->
-<!--                      state = "TX", -->
-<!--                      geometry = FALSE) -->
-<!-- tract_acs %<>%  -->
-<!--   rename(pop = estimate) -->
-<!-- ``` -->
-
-<!-- ```{r, include=FALSE} -->
-<!-- #### join tracts and population -->
-<!-- # all shapefile GEOIDs in acs query -->
-<!-- # sum(!tracts_sf$GEOID %in% tract_acs$GEOID)  -->
-
-<!-- tracts_sf %<>%  -->
-<!--   left_join(tract_acs %>%  -->
-<!--               select(GEOID, pop)) -->
-<!-- ``` -->
-
-<!-- ```{r, include=FALSE} -->
-<!-- #### read cbsa data -->
-<!-- cbsa <- read_csv("../data/input/cbsa.csv") -->
-
-<!-- cbsa %<>%  -->
-<!--   mutate(cbsa = as.character(cbsa),  -->
-<!--          fips = as.character(fips)) -->
-<!-- ``` -->
-
-<!-- ```{r, include=FALSE} -->
-<!-- #### join tracts_sf and cbsa data -->
-<!-- tracts_sf %<>%  -->
-<!--   mutate(fips = paste0(STATEFP, COUNTYFP)) -->
-
-<!-- # some tracts are not listed in the cbsa file -->
-<!-- # unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips]) -->
-
-<!-- tracts_sf %<>%  -->
-<!--   left_join(cbsa) %>%  -->
-<!--   mutate(cbsa = if_else(is.na(cbsa), COUNTYFP, cbsa),  -->
-<!--          cbsa_name = if_else(is.na(cbsa_name), fips, cbsa_name) -->
-<!--          ) %>%  -->
-<!--   group_by(cbsa) %>%  -->
-<!--   mutate(pop_cbsa = sum(pop)) %>%  -->
-<!--   ungroup() -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- # recover population and area from tracts and add to flares data -->
-<!-- # add parcels and density -->
-<!-- flares %<>%  -->
-<!--   left_join( -->
-<!--     tracts_sf %>%  -->
-<!--       st_drop_geometry() %>%  -->
-<!--       select(GEOID, area) -->
-<!--     ) %>%  -->
-<!--   mutate(parcels = flares * 1200) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- # recover population and area from tracts and add to dispersion data -->
-<!-- # add parcels -->
-<!-- dispersion %<>%  -->
-<!--   rename(GEOID = id,  -->
-<!--          date = start_day) %>%  -->
-<!--   left_join( -->
-<!--     tracts_sf %>%  -->
-<!--       st_drop_geometry() %>%  -->
-<!--       select(GEOID, area) -->
-<!--     ) %>%  -->
-<!--   mutate(parcels = count * weight)  -->
-<!-- ``` -->
-
-<!-- Daily time series -->
-
-<!-- ```{r} -->
-<!-- daily_flares <- flares %>%  -->
-<!--   group_by(date) %>%  -->
-<!--   summarise(parcels = sum(parcels)) -->
-
-<!-- daily_dispersion <- dispersion %>%  -->
-<!--   group_by(date) %>%  -->
-<!--   summarise(parcels = sum(parcels)) -->
-<!-- ``` -->
-
-
-<!-- ```{r} -->
-<!-- daily_flares %>%  -->
-<!-- ggplot() +  -->
-<!--   geom_line(aes(x = date, y = parcels, color = parcels)) + -->
-<!--   theme_cowplot() +  -->
-<!--   labs(title = "Daily total parcels", x = "") -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- daily_dispersion %>%  -->
-<!-- ggplot() +  -->
-<!--   geom_line(aes(x = date, y = parcels, color = parcels)) + -->
-<!--   theme_cowplot() +  -->
-<!--   labs(title = "Daily total parcels", x = "") -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- daily_comparison <- daily_flares %>%  -->
-<!--   rename(source_parcels = parcels) %>%   -->
-<!--   left_join(daily_dispersion %>%  -->
-<!--               rename(target_parcels = parcels)) %>%  -->
-<!--   mutate(diff = target_parcels - source_parcels) -->
-<!-- daily_comparison -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- unique(daily_comparison$date[!daily_comparison$diff == 0]) -->
-<!-- ``` -->
+p5 <- parcels_sf %>%  
+  ggplot() + 
+  geom_sf(aes(fill = hyads), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
+  
+plot_grid(p1, p2, p3, p4, p5)
+```

@@ -7,6 +7,8 @@ library(lubridate)
 library(sf)
 library(sp)
 library(cowplot)
+library(xts)
+library(tbl2xts)
 ```
 
 ```{r}
@@ -72,108 +74,97 @@ time_grid_sf %<>%
 spplot(as_Spatial(time_grid_sf))
 ```
 
+```{r}
+dates <- seq(min(flares$date), max(flares$date), by = "day")
+density_ts <- list()
+density_ts <- c(density_ts,
+               xts(NULL, dates))
 
-<!-- ```{r} -->
-<!-- library(xts) -->
-<!-- library(tbl2xts) -->
-<!-- library(sf) -->
-<!-- library(maps) -->
-<!-- library(viridis) -->
-<!-- library(sp) -->
-<!-- ``` -->
+for(id in unique(flares$GEOID)) {
+  density_ts[[id]] <- xts(flares$density[flares$GEOID == id],
+                          flares$date[flares$GEOID == id])
+}
+density_ts <- do.call(merge, density_ts)
+density_ts[is.na(density_ts)] <- 0
 
+density_ts[1:10, 1:5]
+```
 
-<!-- ```{r} -->
-<!-- dates <- seq(min(flares$date), max(flares$date), by = "day") -->
-<!-- density_ts <- list() -->
-<!-- density_ts <- c(density_ts,  -->
-<!--                xts(NULL, dates)) -->
+```{r}
+density_ts %>% xts_tbl() %>%
+  pivot_longer(-date) %>%
+  ggplot() +
+  geom_line(aes(x = date, y = value, col = name)) +
+  theme(legend.position = "none") #+
+  #facet_wrap(~name, scales = "free", strip.position = "bottom")
+```
 
-<!-- for(id in unique(flares$GEOID)) { -->
-<!--   density_ts[[id]] <- xts(flares$density[flares$GEOID == id],  -->
-<!--                           flares$date[flares$GEOID == id])  -->
-<!-- } -->
-<!-- density_ts <- do.call(merge, density_ts) -->
-<!-- density_ts[is.na(density_ts)] <- 0 -->
+```{r}
+cum_density_ts <- as.xts(apply(density_ts["2016"],2,cumsum))
 
-<!-- density_ts[1:10, 1:5] -->
-<!-- ``` -->
+cum_density_ts %>% xts_tbl() %>%
+  pivot_longer(-date) %>%
+  ggplot() +
+  geom_line(aes(x = date, y = value, col = name)) +
+  theme(legend.position = "none")
+```
 
-<!-- ```{r} -->
-<!-- density_ts %>% xts_tbl() %>%  -->
-<!--   pivot_longer(-date) %>%  -->
-<!--   ggplot() +  -->
-<!--   geom_line(aes(x = date, y = value, col = name)) +  -->
-<!--   theme(legend.position = "none") #+ -->
-<!--   #facet_wrap(~name, scales = "free", strip.position = "bottom") -->
-<!-- ``` -->
+```{r}
+intensity_years <- density_ts %>% xts_tbl() %>%
+  pivot_longer(-date, names_to = "GEOID", values_to = "density") %>%
+  mutate(year = year(date)) %>%
+  group_by(year, GEOID) %>%
+  summarise(tot_density = sum(density),
+            mean_density = mean(density),
+            median_density = median(density)) %>%
+  ungroup() %>%
+  mutate(concentration = mean_density / max(mean_density) * 100,
+         #exposure = concentration / 100 * pop
+         )
 
-<!-- ```{r} -->
-<!-- cum_density_ts <- as.xts(apply(density_ts["2016"],2,cumsum)) -->
+summary(intensity_years$tot_density)
+summary(intensity_years$mean_density)
+summary(intensity_years$median_density)
+summary(intensity_years$concentration)
+```
 
-<!-- cum_density_ts %>% xts_tbl() %>%  -->
-<!--   pivot_longer(-date) %>%  -->
-<!--   ggplot() +  -->
-<!--   geom_line(aes(x = date, y = value, col = name)) +  -->
-<!--   theme(legend.position = "none") -->
-<!-- ``` -->
+```{r}
+maps <- list()
+for(y in 2015:2020) {
+  intensity_ <- filter(intensity_years, year == y)
+  maps[[as.character(y)]] <- tracts_sf %>%
+    mutate(GEOID = paste0("X", GEOID)) %>%
+    filter(GEOID %in% intensity_$GEOID) %>%
+    left_join(intensity_) %>%
+    ggplot() +
+    geom_sf(aes(fill = concentration), colour = NA, lwd = 0) +
+    scale_fill_viridis()
+}
+maps
+```
 
-<!-- ```{r} -->
-<!-- intensity_years <- density_ts %>% xts_tbl() %>%  -->
-<!--   pivot_longer(-date, names_to = "GEOID", values_to = "density") %>%  -->
-<!--   mutate(year = year(date)) %>%  -->
-<!--   group_by(year, GEOID) %>%  -->
-<!--   summarise(tot_density = sum(density),  -->
-<!--             mean_density = mean(density),  -->
-<!--             median_density = median(density)) %>%  -->
-<!--   ungroup() %>%  -->
-<!--   mutate(concentration = mean_density / max(mean_density) * 100,  -->
-<!--          #exposure = concentration / 100 * pop -->
-<!--          ) -->
+```{r}
+intensity_ <- intensity_years %>%
+  group_by(GEOID) %>%
+  summarise(mean_concentr = mean(concentration))
 
-<!-- summary(intensity_years$tot_density) -->
-<!-- summary(intensity_years$mean_density) -->
-<!-- summary(intensity_years$median_density) -->
-<!-- summary(intensity_years$concentration) -->
-<!-- ``` -->
+intensity_ %>%
+  ggplot() +
+  geom_histogram(aes(x = mean_concentr))
 
-<!-- ```{r} -->
-<!-- maps <- list() -->
-<!-- for(y in 2015:2020) { -->
-<!--   intensity_ <- filter(intensity_years, year == y) -->
-<!--   maps[[as.character(y)]] <- tracts_sf %>%  -->
-<!--     mutate(GEOID = paste0("X", GEOID)) %>%  -->
-<!--     filter(GEOID %in% intensity_$GEOID) %>%  -->
-<!--     left_join(intensity_) %>%  -->
-<!--     ggplot() +  -->
-<!--     geom_sf(aes(fill = concentration), colour = NA, lwd = 0) +  -->
-<!--     scale_fill_viridis() -->
-<!-- } -->
-<!-- maps -->
-<!-- ``` -->
+tracts_sf %>%
+  mutate(GEOID = paste0("X", GEOID)) %>%
+  filter(GEOID %in% unique(intensity_$GEOID)) %>%
+  left_join(intensity_) %>%
+    ggplot() +
+    #geom_sf(data = filter(states_sf, ID == "texas")) +
+    geom_sf(aes(fill = mean_concentr), colour = NA, lwd = 0) +
+    scale_fill_viridis() +
+    labs(title = "Annual mean tract concentrations")
+```
 
-<!-- ```{r} -->
-<!-- intensity_ <- intensity_years %>%  -->
-<!--   group_by(GEOID) %>%  -->
-<!--   summarise(mean_concentr = mean(concentration)) -->
-
-<!-- intensity_ %>%  -->
-<!--   ggplot() +  -->
-<!--   geom_histogram(aes(x = mean_concentr)) -->
-
-<!-- tracts_sf %>%  -->
-<!--   mutate(GEOID = paste0("X", GEOID)) %>%  -->
-<!--   filter(GEOID %in% unique(intensity_$GEOID)) %>%  -->
-<!--   left_join(intensity_) %>%  -->
-<!--     ggplot() +  -->
-<!--     #geom_sf(data = filter(states_sf, ID == "texas")) +  -->
-<!--     geom_sf(aes(fill = mean_concentr), colour = NA, lwd = 0) +  -->
-<!--     scale_fill_viridis() + -->
-<!--     labs(title = "Annual mean tract concentrations") -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- intensity_years %>%  -->
-<!--   filter(GEOID == "X48389950200") -->
-<!-- ``` -->
+```{r}
+intensity_years %>%
+  filter(GEOID == "X48389950200")
+```
 

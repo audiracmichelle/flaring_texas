@@ -204,7 +204,8 @@ disperser_input <- unnest(disperser_input, cols = c(start_hour))
 
 disperser_input %<>% 
   rename(ID = GEOID, 
-         start_day = date) %>% 
+         start_day = date, 
+         w = flares) %>% 
   mutate(uID = ID, 
          Height = 20, 
          year = year(start_day), 
