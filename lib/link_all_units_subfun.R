@@ -73,7 +73,7 @@ link_to <- function(d,
 
   # if county.so, return xyz object
   if( link.to == 'counties'){
-    ##### print( 'Linking counties!')
+    print( 'Linking counties!')
     
     ##### -------- flaring_texas adaptation >>>
     # if( link.to == 'counties'){
