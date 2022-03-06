@@ -24,55 +24,58 @@
 #'
 #' @return This function returns fac model results.
 
+##### -------- flaring_texas adaptation >>>
+# the number of particles is determined by npart and a weight that is pulled from input.refs$w 
+##### -------- flaring_texas adaptation >>>
 
 #' @export run_disperser_parallel
 
 run_disperser_parallel <- function(input.refs = NULL,
-                                   pbl.height = NULL,
-                                   species = 'so2',
-                                   proc_dir = proc_dir,
-                                   overwrite = F,
-                                   npart = 100,
-                                   mc.cores = parallel::detectCores(),
-                                   keep.hysplit.files = FALSE){
-  
+  pbl.height = NULL,
+  species = 'so2',
+  proc_dir = proc_dir,
+  overwrite = F,
+  npart = 100,
+  mc.cores = parallel::detectCores(),
+  keep.hysplit.files = FALSE){
+
   ## run_fac() below assums that there is one year data.
-  run_sample <- seq(1, nrow(input.refs))
-  
-  ## run the run_fac in parallel
-  parallel::mclapply(X = run_sample,
-                     FUN = run_fac,
-                     input.refs = input.refs,
-                     pbl.height = pbl.height,
-                     species =   species,
-                     proc_dir = proc_dir,
-                     overwrite = overwrite,
-                     npart =  npart,
-                     keep.hysplit.files = keep.hysplit.files,
-                     mc.cores = mc.cores)
-}
+    run_sample <- seq(1, nrow(input.refs))
+
+    ## run the run_fac in parallel
+      parallel::mclapply(X = run_sample,
+      FUN = run_fac,
+      input.refs = input.refs,
+      pbl.height = pbl.height,
+      species =   species,
+      proc_dir = proc_dir,
+      overwrite = overwrite,
+      npart =  npart,
+      keep.hysplit.files = keep.hysplit.files,
+      mc.cores = mc.cores)
+  }
 
 
 run_fac <- function(x,
-                    input.refs = input.refs,
-                    pbl.height = pbl.height,
-                    species = species,
-                    npart = npart,
-                    overwrite = overwrite,
-                    keep.hysplit.files,
-                    proc_dir = proc_dir) {
-  
+  input.refs = input.refs,
+  pbl.height = pbl.height,
+  species = species,
+  npart = npart,
+  overwrite = overwrite,
+  keep.hysplit.files,
+  proc_dir = proc_dir) {
+
   subset <- input.refs[x]
   print(subset)
-  
+
   ## function to negate
   '%ni%' <- function(x, y) {
     return(!('%in%'(x, y)))
   }
-  
+
   #########################################################################################################
   ## define speciec params depening on species.
-  
+
   if (species == 'so2') {
     species_param <-
       data.table(
@@ -95,7 +98,7 @@ run_fac <- function(x,
   } else {
     stop("No species or incorrect species defined!")
   }
-  
+
   #########################################################################################################
   ## subset the data using the indexes provided.
   print(paste0(
@@ -104,14 +107,14 @@ run_fac <- function(x,
     ', Hour: ',
     subset$start_hour
   ))
-  
+
   if (is.na(subset$Height)) {
     stop("Check to make sure your Height is defined in the run_ref_tab!")
   }
-  
+
   #########################################################################################################
   ## Check if Height parameter in unit is NA
-  
+
   # create sharded directory structure
   hysp_dir_yr <- file.path( hysp_dir, subset$year)
   hysp_dir_mo <- file.path( hysp_dir_yr,
@@ -119,7 +122,7 @@ run_fac <- function(x,
                               month( subset$start_day),
                               width = 2, flag = '0'))
   dir.create( hysp_dir_mo, showWarnings = TRUE, recursive = TRUE)
-  
+
   ## Define output file names
   output_file <- path.expand(file.path(
     hysp_dir_mo,
@@ -139,8 +142,8 @@ run_fac <- function(x,
     )
   ))
   message(paste("output file", output_file))
-  
-  
+
+
   ## Initial output data.table
   out <-
     paste(
@@ -150,20 +153,20 @@ run_fac <- function(x,
       ##### -------- flaring_texas adaptation >>>
       output_file
     )
-  
+
   ## Check if output parcel locations file already exists
   tmp.exists <- file.exists( file.path(output_file))
-  
+
   if (!tmp.exists | overwrite == TRUE) {
     message("Defining HYSPLIT model parameters and running the model.")
-    
+
     ## Create run directory
     run_dir <- file.path(proc_dir, paste0(subset$ID, '_', paste(subset[, .(ID, start_day, start_hour)], collapse = '_')))
-    
+
     ## preemptively remove if run_dir already exists, then create
     unlink(run_dir, recursive = TRUE)
     dir.create(run_dir, showWarnings = FALSE)
-    
+
     ## Define the dispersion model
     dispersion_model <-
       disperseR::create_disp_model() %>%
@@ -181,7 +184,7 @@ run_fac <- function(x,
         ddep_vel = species_param$ddep_vel
       ) %>%
       disperseR::add_grid(range = c(0.5, 0.5),
-                          division = c(0.1, 0.1)) %>%
+        division = c(0.1, 0.1)) %>%
       disperseR::add_params(
         lat = subset$Latitude,
         lon = subset$Longitude,
@@ -193,9 +196,9 @@ run_fac <- function(x,
         met_type = "reanalysis",
         met_dir = meteo_dir
       ) %>%
-      disperseR::run_model(npart = npart, run.dir = run_dir)
-    
-    
+      disperseR::run_model(npart = npart * subset$w, run.dir = run_dir) # < --- flaring_texas adaptation
+
+
     ## Extract output from the dispersion model
     dispersion_df <- dispersion_model %>% get_output_df() %>% data.table()
     
@@ -204,20 +207,20 @@ run_fac <- function(x,
     # disp_df <- trim_zero(dispersion_df)
     disp_df <- dispersion_df
     ##### -------- flaring_texas adaptation <<<
-    
+
     ## Add parcel date and time
     disp_df$Pdate <- subset$start_day + disp_df$hour / 24
     #### -------- flaring_texas adaptation >>>
     # for a very high time resolution application Pdate should be modified to
     # disp_df$PDATE <- as.POSIXct(subset$start_day + subset$start_hour / 24 + disp_df$hour / 24) #michelle: added subset start hour
     #### -------- flaring_texas adaptation <<<
-    
+
     # trims particles that are above the global max boundary value
     ##### -------- flaring_texas adaptation >>>
     # disp_df_trim <- disp_df[height <= 2665]
     disp_df_trim <- disp_df
     ##### -------- flaring_texas adaptation <<<
-    
+
     ## Save R data frame
     save.vars <- c('lon', 'lat', 'height', 'Pdate', 'hour')
     partial_trimmed_parcel_locs <-
@@ -231,12 +234,13 @@ run_fac <- function(x,
         ##### -------- flaring_texas adaptation <<<
         output_file
       )
-    
+
     ## Erase run files
     if (!keep.hysplit.files)
       unlink(run_dir, recursive = TRUE)
   }
-  
-  
+
+
   return(out)
 }
+
