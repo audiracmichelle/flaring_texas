@@ -15,13 +15,13 @@ args = parser$parse_args()
 # args=list()
 # args$year = as.integer(2015)
 # args$start = as.integer(7)
-# args$end = as.integer(12)
-# args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+# args$end = as.integer(8)
+# args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas/vanilla"
 
 ####
 # override original disperseR functions
-source("./R/link_all_units_subfun.R")
-source("./R/link_all_units.R")
+#source("./lib/link_all_units_subfun.R")
+#source("./lib/link_all_units.R")
 
 #### 
 # create dirs
@@ -31,23 +31,12 @@ disperseR::create_dirs(args$wkdir)
 #### 
 # prepare input
 
-input <- read_rds("./data/input/input.rds")
-
-input %<>% 
-  mutate(ID = GEOID, 
-         uID = GEOID, 
-         Height = 20, 
-         year = year(date), 
-         month = month(date),
-         start_day = date, 
-         duration_emiss_hours = 1,
-         duration_run_hours = 12)
+input <- read_rds("./data/jobs_input/disperser_input.rds")
 
 input %<>% 
   filter(year == args$year, 
          month >= args$start,
-         month <= args$end
-         )
+         month <= args$end)
 
 ######## ######## ######## ########
 # link_units
@@ -78,7 +67,7 @@ tracts_sf %<>%
          state_name = statefp)
 crosswalk. = NULL
 duration.run.hours = 12
-res.link = 5000
+res.link = 12000
 overwrite = FALSE
 
 linked_counties <- link_all_units(
@@ -98,7 +87,7 @@ linked_counties %<>%
 
 write_rds(linked_counties, 
           paste0(args$wkdir, 
-                 "/data/output/", 
+                 "/data/jobs_output/", 
                  "linked_counties_", 
                  args$year, "_", 
                  args$start, "_", 
