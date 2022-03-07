@@ -1,1 +1,0 @@
-singularity exec disperser_latest.sif Rscript --vanilla jobs/run_disperser.R -y 2015 -n 1000 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"

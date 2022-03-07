@@ -1,0 +1,274 @@
+---
+output: 
+  html_document:
+    keep_md: true
+---
+
+# particles
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(maps)
+library(gridExtra)
+library(cowplot)
+library(viridis)
+library(RColorBrewer)
+library(ggthemes)
+library(tidycensus)
+library(leaflet)
+#### include your census api key
+#census_api_key('<your_key>')
+```
+
+```{r}
+## Read particles data
+dispersion <- lapply(2015:2020, 
+                     function(y) read_rds(paste0("../data/output/polygon_parcels_", 
+                                                y, ".rds")))
+dispersion <- bind_rows(dispersion)
+
+dispersion %<>%
+  rename(GEOID = id, 
+         date = start_day) %>% 
+  mutate(parcels = count * weight, 
+         year = year(date), 
+         month = month(date))
+```
+
+```{r, include=FALSE}
+#### read state shapefile
+states_sf <- st_as_sf(map("state", plot = FALSE, fill = TRUE))
+crs_ <- st_crs(states_sf)
+```
+
+<!-- ```{python} -->
+<!-- import wget -->
+<!-- from zipfile import ZipFile -->
+<!-- import os -->
+
+<!-- url = 'https://www2.census.gov/geo/tiger/TIGER2016/TRACT/tl_2016_48_tract.zip' -->
+<!-- wget.download(url, os.path.expanduser('~/tmp')) -->
+<!-- file_name = os.path.expanduser('~/tmp/tl_2016_48_tract.zip') -->
+<!-- ZipFile(file_name, 'r').extractall(os.path.expanduser('~/tmp/tl_2016_48_tract/')) -->
+<!-- os.system("ls ~/tmp/tl_2016_48_tract/") -->
+<!-- ``` -->
+
+```{r, include=FALSE}
+#### read tracts shapefile
+tracts_sf <- st_read("../data/input/tl_2016_48_tract/tl_2016_48_tract.shp")
+tracts_sf <- tracts_sf %>% 
+  dplyr::filter(STATEFP == "48") %>% 
+  mutate(area = ALAND / 1e6) #ALAND in tiger filers is reported in sq meters
+tracts_sf <- st_transform(tracts_sf, crs_)
+```
+
+```{r, include=FALSE}
+#### get tracts population
+v18 <- load_variables(2018, "acs5", cache = TRUE)
+# View(v18)
+
+# Estimate!!Total
+tract_acs <- get_acs(year = 2018,
+                     geography = "tract",
+                     variables = "B01001_001",
+                     state = "TX",
+                     geometry = FALSE)
+tract_acs %<>% 
+  rename(pop = estimate)
+```
+
+```{r, include=FALSE}
+#### join tracts and particles
+# all particles GEOIDs in shapefile
+# sum(!particles$GEOID %in% tracts_sf$GEOID)
+
+tracts_sf %<>% 
+  left_join(dispersion %>% 
+              group_by(GEOID) %>% 
+              summarise(tot_parcels = sum(parcels)))
+```
+
+```{r, include=FALSE}
+#### join tracts and population
+# all shapefile GEOIDs in acs query
+# sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
+
+tracts_sf %<>% 
+  left_join(tract_acs %>% 
+              select(GEOID, pop))
+```
+
+```{r, include=FALSE}
+#### read cbsa data
+cbsa <- read_csv("../data/input/cbsa.csv")
+
+cbsa %<>% 
+  mutate(cbsa = as.character(cbsa), 
+         fips = as.character(fips))
+```
+
+```{r, include=FALSE}
+#### join tracts_sf and cbsa data
+tracts_sf %<>% 
+  mutate(fips = paste0(STATEFP, COUNTYFP))
+
+# some tracts are not listed in the cbsa file
+#unique(tracts_sf$fips[!tracts_sf$fips %in% cbsa$fips])
+
+tracts_sf %<>% 
+  left_join(cbsa) %>% 
+  mutate(cbsa = if_else(is.na(cbsa), COUNTYFP, cbsa), 
+         cbsa_name = if_else(is.na(cbsa_name), fips, cbsa_name)
+         ) %>% 
+  group_by(cbsa) %>% 
+  mutate(pop_cbsa = sum(pop)) %>% 
+  ungroup()
+```
+
+## Tract population
+
+Census tracts are small, relatively permanent statistical subdivisions of a county.
+
+Census tracts average about 4,000
+inhabitants
+– Minimum Population – 1,200
+– Maximum Population – 8,000
+
+```{r}
+tracts_sf %>% 
+  mutate(parcels_event = if_else(is.na(tot_parcels), F, T)) %>% 
+  ggplot() + 
+  geom_density(aes(x = pop, fill = parcels_event), alpha = 0.5)
+```
+
+## Area per tract
+
+```{r}
+summary(tracts_sf$area[!is.na(tracts_sf$tot_parcels)]) # census tracks with zero land are water only
+```
+
+```{r}
+tracts_sf$tot_parcels[tracts_sf$area == 0] # think later how to treat these tracts
+```
+
+## Daily parcels
+
+```{r}
+ts <- seq(min(dispersion$date), max(dispersion$date), by="day")
+ts <- data.frame(date = ts)
+
+dispersion_daily <- list()
+for(g in unique(dispersion$GEOID)) {
+  dispersion_daily[[g]] <- ts %>% 
+    left_join(dispersion %>% 
+                filter(GEOID == g) %>% 
+                select(date, parcels)) %>% 
+    mutate(GEOID = g, 
+           flares = if_else(is.na(parcels), 0, parcels))
+}
+dispersion_daily <- bind_rows(dispersion_daily)
+
+# recover population and area from tracts and add to flares data
+dispersion_daily %<>% 
+  left_join(
+    tracts_sf %>% 
+      st_drop_geometry() %>% 
+      select(GEOID, pop, area)
+    )
+
+# compute density measure
+dispersion_daily %<>% 
+  mutate(parcels = flares * 12 * 100, 
+         density = parcels / area)
+```
+
+```{r}
+dispersion_daily %>% 
+  mutate(year = year(date), 
+         month = month(date)) %>% 
+  group_by(year, month) %>% 
+  summarise(parcels = sum(parcels)) %>% 
+  mutate(date = as.Date(paste0(year, "-", 
+                              month, "-", 
+                              "01"))) %>% 
+  ggplot() + 
+  geom_line(aes(x = date, y = parcels, color = parcels)) +
+  theme_cowplot() + 
+  labs(title = "Monthly total air parcels", x = "")
+```
+
+```{r}
+# define dispersion_years
+dispersion_years <- dispersion_daily %>% 
+  mutate(year = year(date)) %>% 
+  group_by(year, GEOID, pop) %>% 
+  summarise(tot_density = sum(density), 
+            mean_density = mean(density), 
+            median_density = median(density)) %>% 
+  ungroup() %>% 
+  mutate(concentration = mean_density / max(mean_density) * 100, 
+         exposure = concentration / 100 * pop)
+
+summary(dispersion_years$tot_density)
+summary(dispersion_years$mean_density)
+summary(dispersion_years$median_density)
+summary(dispersion_years$concentration)
+summary(dispersion_years$exposure)
+```
+
+```{r}
+ggplot(dispersion_years) + 
+  geom_histogram(aes(x = concentration))
+```
+
+```{r}
+ggplot(dispersion_years) + 
+  geom_histogram(aes(x = exposure))
+```
+
+```{r}
+tapply(dispersion_years$concentration, dispersion_years$year, summary)
+
+dispersion_years %>% 
+  filter(year > 2015) %>% 
+  ggplot() +
+  geom_boxplot(aes(x = as.factor(year), y = concentration)) + 
+  scale_y_sqrt()
+```
+
+```{r}
+tracts_sf %<>% 
+    left_join(dispersion_years %>% 
+                group_by(GEOID) %>% 
+                summarise(mean_concentr = mean(concentration), 
+                          mean_exposure = mean(exposure)))
+```
+
+```{r}
+tracts_sf  %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = mean_concentr), colour = NA, lwd = 0) + 
+    scale_fill_viridis() +
+    theme_map() + 
+    theme(legend.position = "right") + 
+    labs(title = "Annual mean tract concentrations")
+```
+
+```{r}
+tracts_sf  %>% 
+    ggplot() + 
+    geom_sf(data = filter(states_sf, ID == "texas")) + 
+    geom_sf(aes(fill = mean_exposure), colour = NA, lwd = 0) + 
+    scale_fill_viridis() +
+    theme_map() + 
+    theme(legend.position = "right") + 
+    labs(title = "Annual mean tract exposures")
+```

@@ -1,0 +1,247 @@
+# Parcels checkpoint
+
+```{r, warning=F, message=F}
+source("../lib/polygon_parcels_parallel.R")
+
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(data.table)
+library(fst)
+library(sf)
+library(gridExtra)
+library(cowplot)
+library(viridis)
+library(ggthemes)
+library(knitr)
+
+disperser_input <- read_rds("../data/jobs_input/disperser_input.rds")
+polygons_sf <- st_read("../data/input/tl_2016_48_tract/tl_2016_48_tract.shp") # <- for polygon_parcel input
+tracts_sf <- read_rds("../data/preprocessed/tracts_sf.rds") # <- for analysis
+```
+
+## check 1
+
+* check disperser was able to run simulations for all emissions in disperser_input (compare with `ls | wc` at the simulations location)
+
+```{r}
+#### number of files disperser will create for each year month
+disperser_input %>% 
+  group_by(year, month) %>% 
+  summarise(n = n()) %>% DT::datatable()
+```
+
+## check 2
+
+* validate that the number of parcels that are dispersed in each simulation run are counted in the polygon_parcel function
+
+```{r}
+#### set params for run_polygon_parcels
+polygons_sf %<>% 
+  filter(STATEFP == "48")  %>% 
+  mutate(GEOID = as.character(GEOID)) %>% 
+  rename(id = GEOID)
+polygons_sf <- polygons_sf[, 'id']
+hysp_dir = "../data/jobs_output/hysplit"
+mc.cores = parallel::detectCores()
+
+range = which(disperser_input$start_day == as.Date("2018-01-06") & 
+                disperser_input$start_hour == 2)
+input.refs = data.table(disperser_input[range,], stringsAsFactors = FALSE)
+
+run_X <- lapply(1:nrow(input.refs), function(r) input.refs[r])
+```
+
+```{r, warning=F, message=F, results='hide'}
+res.link = 12000
+
+polygon_parcels <- list()
+parcels_count <- c()
+plots <- list()
+for(X in run_X){
+  polygon_parcels[[X$ID]] <- run_polygon_parcels(X = X, 
+                                         polygons_sf = polygons_sf, 
+                                         hysp_dir = hysp_dir, 
+                                         res.link = res.link)
+  parcels_count <- c(parcels_count, sum(polygon_parcels[[X$ID]]$count, na.rm = T))
+
+  parcels_sf <- tracts_sf %>%  
+    left_join(rename(polygon_parcels[[X$ID]], GEOID = id)) %>% 
+    filter(GEOID %in% polygon_parcels[[X$ID]]$id) %>% 
+    mutate(concentration = count / area)
+
+  p1 <- parcels_sf %>%  
+    ggplot() + 
+    geom_sf(aes(fill = count), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
+
+  p2 <- parcels_sf %>% 
+    ggplot() + 
+    geom_sf(aes(fill = concentration), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
+
+  p3 <- parcels_sf %>%  
+    ggplot() + 
+    geom_sf(aes(fill = hyads), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
+  
+  p4 <- parcels_sf %>%
+    mutate(concentr_adj = concentration / max(parcels_sf$concentration, na.rm = T),
+           hyads_adj = hyads / max(parcels_sf$hyads, na.rm = T)) %>%
+    ggplot() +
+    geom_point(aes(x=hyads_adj, y=count)) +
+    geom_point(aes(x=concentr_adj, y=count), col = "red") + 
+    labs(x = "concentration (red), hyads(black)") 
+
+  plots[[X$ID]] <- plot_grid(p1, p2, p3, p4)
+}
+
+polygon_parcels_1 <- rbindlist(polygon_parcels)
+```
+
+```{r}
+parcels_count
+```
+
+## check 3
+
+* visual inspection of counts and raw concentrations and exposure estimates using two values for `res.link` the length of the grid square's sides that are used to compute hyads exposure. The first group uses `res.link=12000` and the second group `res.link=100000`.
+
+### Group 1
+
+```{r}
+plots
+```
+
+### Group 2
+
+```{r, warning=F, message=F, results='hide'}
+res.link = 100000
+
+polygon_parcels <- list()
+parcels_count <- c()
+plots <- list()
+for(X in run_X){
+  polygon_parcels[[X$ID]] <- run_polygon_parcels(X = X, 
+                                         polygons_sf = polygons_sf, 
+                                         hysp_dir = hysp_dir, 
+                                         res.link = res.link)
+  parcels_count <- c(parcels_count, sum(polygon_parcels[[X$ID]]$count, na.rm = T))
+
+  parcels_sf <- tracts_sf %>%  
+    left_join(rename(polygon_parcels[[X$ID]], GEOID = id)) %>% 
+    filter(GEOID %in% polygon_parcels[[X$ID]]$id) %>% 
+    mutate(concentration = count / area)
+
+  p1 <- parcels_sf %>%  
+    ggplot() + 
+    geom_sf(aes(fill = count), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
+
+  p2 <- parcels_sf %>% 
+    ggplot() + 
+    geom_sf(aes(fill = concentration), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
+
+  p3 <- parcels_sf %>%  
+    ggplot() + 
+    geom_sf(aes(fill = hyads), size = 0) + 
+    scale_fill_viridis(option = "B") +
+    theme_map() + 
+    theme(legend.position = "none")
+  
+  p4 <- parcels_sf %>%
+    mutate(concentr_adj = concentration / max(parcels_sf$concentration, na.rm = T),
+           hyads_adj = hyads / max(parcels_sf$hyads, na.rm = T)) %>%
+    ggplot() +
+    geom_point(aes(x=hyads_adj, y=count)) +
+    geom_point(aes(x=concentr_adj, y=count), col = "red") + 
+    labs(x = "concentration (red), hyads(black)") 
+
+  plots[[X$ID]] <- plot_grid(p1, p2, p3, p4)
+}
+polygon_parcels_2 <- rbindlist(polygon_parcels)
+
+plots
+```
+
+## check 4
+
+* inspection of counts of parcels from all locations, its concentration, and hyads exposure in a single day. Group 1 and 2 use different grid resolutions, `res.link=12000` and `res.link=100000`.
+
+```{r, warning=F, message=F, results='hide'}
+flares_sf <- tracts_sf %>%  
+  left_join(rename(input.refs, GEOID = ID)) %>% 
+  filter(GEOID %in% disperser_input$ID)
+
+p1 <- flares_sf %>% 
+  ggplot() + 
+  geom_sf(aes(fill = flares), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
+
+polygon_parcels <- polygon_parcels_1
+
+polygon_parcels %<>% 
+  group_by(id, weight, source) %>% 
+  summarise(count = weight * sum(count, na.rm = T), 
+            hyads = weight * hyads)
+
+parcels_sf <- tracts_sf %>%  
+  left_join(rename(polygon_parcels, GEOID = id)) %>% 
+  filter(GEOID %in% polygon_parcels$id) %>% 
+  mutate(concentration = weight * count / area)
+
+p2 <- parcels_sf %>%  
+  ggplot() + 
+  geom_sf(aes(fill = count), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
+
+p3 <- parcels_sf %>% 
+  ggplot() + 
+  geom_sf(aes(fill = concentration), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
+
+p4 <- parcels_sf %>%  
+  ggplot() + 
+  geom_sf(aes(fill = hyads), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
+
+polygon_parcels <- polygon_parcels_2
+
+polygon_parcels %<>% 
+  group_by(id, weight, source) %>% 
+  summarise(count = weight * sum(count, na.rm = T), 
+            hyads = weight * hyads)
+
+parcels_sf <- tracts_sf %>%  
+  left_join(rename(polygon_parcels, GEOID = id)) %>% 
+  filter(GEOID %in% polygon_parcels$id) %>% 
+  mutate(concentration = weight * count / area)
+
+p5 <- parcels_sf %>%  
+  ggplot() + 
+  geom_sf(aes(fill = hyads), size = 0) + 
+  scale_fill_viridis(option = "B") +
+  theme_map() + 
+  theme(legend.position = "none")
+  
+plot_grid(p1, p2, p3, p4, p5)
+```

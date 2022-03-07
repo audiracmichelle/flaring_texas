@@ -211,8 +211,23 @@ flares_daily %<>%
 
 # compute density measure
 flares_daily %<>% 
-  mutate(air_parcels = flares * 12 * 100, 
-         density = air_parcels / area)
+  mutate(parcels = flares * 12 * 100, 
+         density = parcels / area)
+```
+
+```{r}
+flares_daily %>% 
+  mutate(year = year(date), 
+         month = month(date)) %>% 
+  group_by(year, month) %>% 
+  summarise(parcels = sum(parcels)) %>% 
+  mutate(date = as.Date(paste0(year, "-", 
+                              month, "-", 
+                              "01"))) %>% 
+  ggplot() + 
+  geom_line(aes(x = date, y = parcels, color = parcels)) +
+  theme_cowplot() + 
+  labs(title = "Monthly total air parcels", x = "")
 ```
 
 ```{r}
