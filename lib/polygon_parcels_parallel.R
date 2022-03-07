@@ -106,7 +106,7 @@ run_polygon_parcels <- function(
   polygon_parcels <- full_join(get_polygon_counts(parcels, proj, polygons_sf), 
                                get_polygon_hyads(parcels, proj, polygons_sf, res.link))
 
-  polygon_parcels$weight <- X$flares
+  polygon_parcels$w <- X$w
   polygon_parcels$source <- X$ID
   polygon_parcels$start_day <- X$start_day
   polygon_parcels$start_hour <- X$start_hour
