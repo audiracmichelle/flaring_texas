@@ -4,6 +4,8 @@
 #'
 #' @description with `link_all_units()` users can link all air parcels to relevant spatial scales by month for specified units with combinations of years and months. `link_all_units()` reads in all the relevant HYSPLIT files (i.e., those that correspond to the provided units) produced by the `run_disperser_parallel()` function and saves them. Then it links them to relevant spatial scales.
 #'
+#'
+#'
 #' @param units.run A data.table with the following columns (and column classes): ID (character)a unique ID assigned to the particles emmission source. uID (character) same as ID. Latitude (numeric) and Longitude (numeric) the emmission source's latitude and longitude. year (integer) in which the emission events occur. Be mindful of the default value of the parameter stringsAsFactors when using the function data.table() to convert a data.frame to a data.table. It can take the data.table in disperseR::units() if `run_disperser_parallel()` used the information on unit locations in disperseR::units().
 #'
 #' @param start.date this argument is not necessary, but can be used if the user is interested in specifying a specific date to start the analysis with as opposed to using months. For example `start.date="2005-01-02"` for 2 January 2005. This argument are set to `NULL` by default and the function computes the start and the end dates using the `year.mons` provided.
@@ -11,8 +13,6 @@
 #' @param start.end this argument is not necessary, but can be used if the user is interested in specifying a specific date to end the analysis with as opposed to using months. For example `start.date="2005-01-02"` for 2 January 2005.This argument are set to `NULL` by default and the function computes the start and the end dates using the `year.mons` provided.
 #'
 #' @param link.to one of 'zips', 'counties', or 'grids' to denote spatial linkage scale. zips and counties are only for the USA. If another spatial unit of aggregation is required (census tracts, census block groups, etc), an sf object with POLYGONS can be provided to the `counties.` parameter. These sf object provided to the `counties.` parameter must have the following columns: statefp (character) the fips id of the state. countyfp (character) the fips id of the county. state_name (character) the name of the state. geoid (character) the id of the aggregation unit. name (character) the name of the aggregation unit. geometry (sfc_POLYGON or sfc_MULTIPOLYGON).
-#' #'
-#' @param by.time this argument is not necessary, but can be used if the user is interested in specifying a time scale other than month for aggregating ("day" is currently the only option besides NULL)
 #'
 #' @param year.mons these are the months for which we would like to do the linking. You can use the get_yearmon() function to create a vector that can be an input here.
 #'
@@ -44,7 +44,6 @@ link_all_units<- function(units.run,
                           year.mons = NULL,
                           start.date = NULL,
                           end.date = NULL,
-                          by.time = "month",
                           pbl_trim = TRUE,
                           pbl.height = NULL,
                           crosswalk. = NULL,
@@ -55,7 +54,7 @@ link_all_units<- function(units.run,
                           pbl.trim = FALSE,
                           crop.usa = FALSE,
                           return.linked.data = TRUE) {
-
+  
   if ((is.null(start.date) |
        is.null(end.date)) & is.null(year.mons)) {
     stop("Define either a start.date and an end.date OR a year.mons")
@@ -69,37 +68,10 @@ link_all_units<- function(units.run,
   if( pbl_trim & is.null( pbl.height))
     stop( "pbl.height must be provided if pbl_trim == TRUE")
   
-  
-  # define start and end dates as a list
-  if (is.null(start.date) | is.null(end.date)) {
-    start.date <-
-      as.Date(paste(
-        substr(year.mons, 1, 4),
-        substr(year.mons, 5, 6),
-        '01',
-        sep = '-'
-      ))
-    end.date <-
-      as.Date(
-        sapply(
-          start.date,
-          function( d) seq( d,
-                            by = paste (1, by.time),
-                            length.out = 2)[2] - 1
-        ),
-        origin = '1970-01-01')
-  }
-  
-  # create list of dates to link
-  link_dates <- lapply( seq_along( start.date),
-                        function (n)
-                          list( start.date = start.date[n],
-                                end.date = end.date[n]))
-  
   zips_link_parallel <- function(unit) {
     linked_zips <- parallel::mclapply(
-      link_dates,
-      disperser_link_zips,
+      year.mons,
+      disperser_link_zips, #disperseR::disperser_link_zips,
       unit = unit,
       pbl.height = pbl.height,
       crosswalk. = crosswalk.,
@@ -110,18 +82,18 @@ link_all_units<- function(units.run,
       pbl. = pbl.trim,
       return.linked.data. = return.linked.data
     )
-
+    
     linked_zips <- data.table::rbindlist(Filter(is.data.table, linked_zips))
     message(paste("processed unit", unit$ID, ""))
-
+    
     linked_zips[, month := as( month, 'character')]
     return(linked_zips)
   }
-
+  
   counties_link_parallel <- function(unit) {
     linked_counties <- parallel::mclapply(
-      link_dates,
-      disperser_link_counties,
+      year.mons,
+      disperser_link_counties, #disperseR::disperser_link_counties,
       unit = unit,
       pbl.height = pbl.height,
       counties = counties.,
@@ -132,18 +104,18 @@ link_all_units<- function(units.run,
       pbl. = pbl.trim,
       return.linked.data. = return.linked.data
     )
-
+    
     linked_counties <- data.table::rbindlist(Filter(is.data.table, linked_counties))
     message(paste("processed unit", unit$ID, ""))
-
+    
     linked_counties[, month := as( month, 'character')]
     return(linked_counties)
   }
-
+  
   grids_link_parallel <- function(unit) {
     linked_grids <- parallel::mclapply(
-      link_dates,
-      disperser_link_grids,
+      year.mons,
+      disperser_link_grids, #disperseR::disperser_link_grids,
       unit = unit,
       pbl.height = pbl.height,
       duration.run.hours = duration.run.hours,
@@ -154,23 +126,23 @@ link_all_units<- function(units.run,
       crop.usa = crop.usa,
       return.linked.data. = return.linked.data
     )
-
+    
     linked_grids <- data.table::rbindlist(Filter(is.data.table, linked_grids))
     message(paste("processed unit", unit$ID, ""))
-
+    
     linked_grids[, month := as( month, 'character')]
     return(linked_grids)
   }
-
+  
   units.run <- unique( units.run[, .( uID, ID)])
-
+  
   if( link.to == 'zips')
     out <- units.run[, zips_link_parallel(.SD), by = seq_len(nrow(units.run))]
   if( link.to == 'counties')
     out <- units.run[, counties_link_parallel(.SD), by = seq_len(nrow(units.run))]
   if( link.to == 'grids')
     out <- units.run[, grids_link_parallel(.SD), by = seq_len(nrow(units.run))]
-
+  
   out[, comb := paste("month: ", out[, month], " unitID :", out[, ID], sep = "")]
   out[, seq_len := NULL]
   return(out)
