@@ -9,4 +9,25 @@ output:
 
 # Flares Texas
 
-Previous studies have identified associations of negative health outcomes in populations within a circular radius from flaring events. A recent study provides evidence of adverse effects in all-cause mortality of elderly due to downwind-exposure to flaring. There is compounding evidence of the long term exposure to flaring pollution, both in the proximity (distance weighted) and accounting for monthly prevailing wind direction. We look at exact trajectories and quantify the dispersion of air parcels within 12 hours from flaring sources. The focus is on the concentration of rapidly spreading air-parcels carrying airborne pollutants emitted during flaring. 
+Previous studies have identified associations of negative health outcomes in populations within a circular radius from flaring events. A recent study provides evidence of adverse effects in all-cause mortality of elderly due to downwind-exposure to flaring. There is compounding evidence of the negative health effects of long term exposure to flaring pollution, both in the proximity and accounting for monthly prevailing wind direction. 
+
+We compare the affected population according to three exposure metrics: 1) raw flaring-counts, 2) naive distance-weighted (kriging on centroid counts), 3) hyads. We don't have a ground truth to compare estimates of exposure, so do the studies that use similar exposure metrics. Units of exposure are different for each metric. Exposure metrics are defined as follows.  
+
+* **raw flaring-counts**
+
+  + monthly flare concentrations are flaring counts per tract normalized by tract area. Average of monthly concentrations render year exposures per tract.
+
+* **naive distance-weighted**
+
+  + kriging method is used to extrapolate exposure values in tracts within the spatial window that have zero flaring counts. This approach produces a proxy of distance weighted exposure to flares.
+  + To estimate monthly flare concentration surfaces, kriging values are obtained for monthly flare concentrations and are assigned to a 12sq km grid. Grid values are averaged over tracts. Average of monthly concentrations render year exposures per tract.
+
+* **hyads**
+
+  + We look at exact trajectories and quantify the dispersion of air parcels within 12 hours from flaring sources. The focus is on the concentration of rapidly spreading air-parcels carrying airborne pollutants emitted during flaring. 
+  + The exposure calculation takes parcel counts in 12 sq km grids. Monthly grid concentration values are averaged over tracts to obtain monthly concentrations which are then averaged to obtain year exposures per tract.
+
+Results are in terms of **total exposed population**. We present how much more population is affected when accounting for wind. Exposure is in different units, once "normalized to a density distribution", population weighted measures are computed per basin (county/tract?).
+
+
+

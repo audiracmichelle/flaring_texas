@@ -176,9 +176,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="flares.html#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
 <span id="cb13-2"><a href="flares.html#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(magrittr)</span>
 <span id="cb13-3"><a href="flares.html#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)</span>
-<span id="cb13-4"><a href="flares.html#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
-<span id="cb13-5"><a href="flares.html#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sp)</span>
-<span id="cb13-6"><a href="flares.html#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cowplot)</span></code></pre></div>
+<span id="cb13-4"><a href="flares.html#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb13-5"><a href="flares.html#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
+<span id="cb13-6"><a href="flares.html#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sp)</span>
+<span id="cb13-7"><a href="flares.html#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cowplot)</span></code></pre></div>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="flares.html#cb14-1" aria-hidden="true" tabindex="-1"></a>flares_data <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">&quot;../data/preprocessed/flares_data.rds&quot;</span>)</span>
 <span id="cb14-2"><a href="flares.html#cb14-2" aria-hidden="true" tabindex="-1"></a>tracts_sf <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">&quot;../data/preprocessed/tracts_sf.rds&quot;</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="flares.html#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">#there are flares for each year-month-basin, no need to fill zero values</span></span>
@@ -193,93 +194,123 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <pre><code>## `summarise()` has grouped output by &#39;yyyy_mm&#39;. You can override using the
 ## `.groups` argument.</code></pre>
 <p><img src="_main_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
-<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="flares.html#cb17-1" aria-hidden="true" tabindex="-1"></a>flares_years <span class="ot">&lt;-</span> flares_data <span class="sc">%&gt;%</span> </span>
-<span id="cb17-2"><a href="flares.html#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">year =</span> <span class="fu">year</span>(date)) <span class="sc">%&gt;%</span> </span>
-<span id="cb17-3"><a href="flares.html#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(year, GEOID, basin, area, pop) <span class="sc">%&gt;%</span> </span>
-<span id="cb17-4"><a href="flares.html#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">flares =</span> <span class="fu">sum</span>(flares)) <span class="sc">%&gt;%</span> </span>
-<span id="cb17-5"><a href="flares.html#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span> </span>
-<span id="cb17-6"><a href="flares.html#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">flares_concentr =</span> flares <span class="sc">/</span> area)</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="flares.html#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># tract-year-month entries are completed where zero is missing</span></span>
+<span id="cb17-2"><a href="flares.html#cb17-2" aria-hidden="true" tabindex="-1"></a>flares_months <span class="ot">&lt;-</span> flares_data <span class="sc">%&gt;%</span> </span>
+<span id="cb17-3"><a href="flares.html#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">year =</span> <span class="fu">year</span>(date), </span>
+<span id="cb17-4"><a href="flares.html#cb17-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">month =</span> <span class="fu">month</span>(date)) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-5"><a href="flares.html#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(year, month, GEOID, basin, area, pop, flares) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-6"><a href="flares.html#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">complete</span>(<span class="fu">nesting</span>(year, month), <span class="fu">nesting</span>(GEOID, basin, area, pop), </span>
+<span id="cb17-7"><a href="flares.html#cb17-7" aria-hidden="true" tabindex="-1"></a>           <span class="at">fill =</span> <span class="fu">list</span>(<span class="at">flares =</span> <span class="dv">0</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-8"><a href="flares.html#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(year, month, GEOID, basin, area, pop) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-9"><a href="flares.html#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">flares =</span> <span class="fu">sum</span>(flares, <span class="at">is.na =</span> T)) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-10"><a href="flares.html#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb17-11"><a href="flares.html#cb17-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(year, month) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-12"><a href="flares.html#cb17-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">complete</span>(GEOID) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-13"><a href="flares.html#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">flares_area =</span> flares <span class="sc">/</span> area)</span></code></pre></div>
+<pre><code>## `summarise()` has grouped output by &#39;year&#39;, &#39;month&#39;, &#39;GEOID&#39;, &#39;basin&#39;, &#39;area&#39;.
+## You can override using the `.groups` argument.</code></pre>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="flares.html#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co">#table(flares_months$GEOID)</span></span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="flares.html#cb20-1" aria-hidden="true" tabindex="-1"></a>flares_years <span class="ot">&lt;-</span> flares_months  <span class="sc">%&gt;%</span> </span>
+<span id="cb20-2"><a href="flares.html#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(year, GEOID, basin, area, pop) <span class="sc">%&gt;%</span> </span>
+<span id="cb20-3"><a href="flares.html#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb20-4"><a href="flares.html#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_flares_area =</span> <span class="fu">min</span>(flares_area, <span class="at">na.rm =</span> T), </span>
+<span id="cb20-5"><a href="flares.html#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">q1_flares_area =</span> <span class="fu">quantile</span>(flares_area, <span class="at">probs =</span> <span class="fl">0.25</span>, <span class="at">na.rm =</span> T), </span>
+<span id="cb20-6"><a href="flares.html#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">median_flares_area =</span> <span class="fu">median</span>(flares_area, <span class="at">na.rm =</span> T), </span>
+<span id="cb20-7"><a href="flares.html#cb20-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">mu_flares_area =</span> <span class="fu">mean</span>(flares_area, <span class="at">na.rm =</span> T), </span>
+<span id="cb20-8"><a href="flares.html#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">q3_flares_area =</span> <span class="fu">quantile</span>(flares_area, <span class="at">probs =</span> <span class="fl">0.75</span>, <span class="at">na.rm =</span> T), </span>
+<span id="cb20-9"><a href="flares.html#cb20-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">max_flares_area =</span> <span class="fu">max</span>(flares_area, <span class="at">na.rm =</span> T)</span>
+<span id="cb20-10"><a href="flares.html#cb20-10" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div>
 <pre><code>## `summarise()` has grouped output by &#39;year&#39;, &#39;GEOID&#39;, &#39;basin&#39;, &#39;area&#39;. You can
 ## override using the `.groups` argument.</code></pre>
-<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="flares.html#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="do">#### you can only read these as concentration within tracts where there are flares!!!</span></span>
-<span id="cb19-2"><a href="flares.html#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(flares_years) <span class="sc">+</span> </span>
-<span id="cb19-3"><a href="flares.html#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">as.factor</span>(year), <span class="at">y =</span> flares_concentr, <span class="at">col =</span> basin))</span></code></pre></div>
-<p><img src="_main_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
-<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="flares.html#cb20-1" aria-hidden="true" tabindex="-1"></a>time_grid_sf <span class="ot">&lt;-</span> tracts_sf <span class="sc">%&gt;%</span> </span>
-<span id="cb20-2"><a href="flares.html#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(GEOID <span class="sc">%in%</span> <span class="fu">unique</span>(flares_data<span class="sc">$</span>GEOID), </span>
-<span id="cb20-3"><a href="flares.html#cb20-3" aria-hidden="true" tabindex="-1"></a>         basin <span class="sc">==</span> <span class="st">&quot;Permian Basin&quot;</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb20-4"><a href="flares.html#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(GEOID) </span>
-<span id="cb20-5"><a href="flares.html#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-6"><a href="flares.html#cb20-6" aria-hidden="true" tabindex="-1"></a>time_grid_sf <span class="sc">%&lt;&gt;%</span> </span>
-<span id="cb20-7"><a href="flares.html#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
-<span id="cb20-8"><a href="flares.html#cb20-8" aria-hidden="true" tabindex="-1"></a>    flares_years <span class="sc">%&gt;%</span> </span>
-<span id="cb20-9"><a href="flares.html#cb20-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">pivot_wider</span>(<span class="at">id_cols =</span> GEOID, <span class="at">names_from =</span> year, <span class="at">values_from =</span> flares_concentr)</span>
-<span id="cb20-10"><a href="flares.html#cb20-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
-<span id="cb20-11"><a href="flares.html#cb20-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>GEOID)</span></code></pre></div>
-<pre><code>## Joining, by = &quot;GEOID&quot;</code></pre>
-<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="flares.html#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">spplot</span>(<span class="fu">as_Spatial</span>(time_grid_sf))</span></code></pre></div>
-<p><img src="_main_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
-<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="flares.html#cb23-1" aria-hidden="true" tabindex="-1"></a>time_grid_sf <span class="ot">&lt;-</span> tracts_sf <span class="sc">%&gt;%</span> </span>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="flares.html#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(flares_years) <span class="sc">+</span> </span>
+<span id="cb22-2"><a href="flares.html#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">as.factor</span>(year), <span class="at">y =</span> mu_flares_area, <span class="at">col =</span> basin)) <span class="sc">+</span> </span>
+<span id="cb22-3"><a href="flares.html#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;Mean of monthly flares per sq km (for tracts with flares)&quot;</span>)</span></code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="flares.html#cb23-1" aria-hidden="true" tabindex="-1"></a>time_parquet_sf <span class="ot">&lt;-</span> tracts_sf <span class="sc">%&gt;%</span> </span>
 <span id="cb23-2"><a href="flares.html#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(GEOID <span class="sc">%in%</span> <span class="fu">unique</span>(flares_data<span class="sc">$</span>GEOID), </span>
-<span id="cb23-3"><a href="flares.html#cb23-3" aria-hidden="true" tabindex="-1"></a>         basin <span class="sc">==</span> <span class="st">&quot;Gulf Coast Basins&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb23-3"><a href="flares.html#cb23-3" aria-hidden="true" tabindex="-1"></a>         basin <span class="sc">==</span> <span class="st">&quot;Permian Basin&quot;</span>) <span class="sc">%&gt;%</span> </span>
 <span id="cb23-4"><a href="flares.html#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(GEOID) </span>
 <span id="cb23-5"><a href="flares.html#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-6"><a href="flares.html#cb23-6" aria-hidden="true" tabindex="-1"></a>time_grid_sf <span class="sc">%&lt;&gt;%</span> </span>
+<span id="cb23-6"><a href="flares.html#cb23-6" aria-hidden="true" tabindex="-1"></a>time_parquet_sf <span class="sc">%&lt;&gt;%</span> </span>
 <span id="cb23-7"><a href="flares.html#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
 <span id="cb23-8"><a href="flares.html#cb23-8" aria-hidden="true" tabindex="-1"></a>    flares_years <span class="sc">%&gt;%</span> </span>
-<span id="cb23-9"><a href="flares.html#cb23-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">pivot_wider</span>(<span class="at">id_cols =</span> GEOID, <span class="at">names_from =</span> year, <span class="at">values_from =</span> flares_concentr)</span>
+<span id="cb23-9"><a href="flares.html#cb23-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">pivot_wider</span>(<span class="at">id_cols =</span> GEOID, <span class="at">names_from =</span> year, <span class="at">values_from =</span> mu_flares_area)</span>
 <span id="cb23-10"><a href="flares.html#cb23-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
 <span id="cb23-11"><a href="flares.html#cb23-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>GEOID)</span></code></pre></div>
 <pre><code>## Joining, by = &quot;GEOID&quot;</code></pre>
-<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="flares.html#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">spplot</span>(<span class="fu">as_Spatial</span>(time_grid_sf))</span></code></pre></div>
-<p><img src="_main_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="flares.html#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">spplot</span>(<span class="fu">as_Spatial</span>(time_parquet_sf))</span></code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="flares.html#cb26-1" aria-hidden="true" tabindex="-1"></a>time_parquet_sf <span class="ot">&lt;-</span> tracts_sf <span class="sc">%&gt;%</span> </span>
+<span id="cb26-2"><a href="flares.html#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(GEOID <span class="sc">%in%</span> <span class="fu">unique</span>(flares_data<span class="sc">$</span>GEOID), </span>
+<span id="cb26-3"><a href="flares.html#cb26-3" aria-hidden="true" tabindex="-1"></a>         basin <span class="sc">==</span> <span class="st">&quot;Gulf Coast Basins&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb26-4"><a href="flares.html#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(GEOID) </span>
+<span id="cb26-5"><a href="flares.html#cb26-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-6"><a href="flares.html#cb26-6" aria-hidden="true" tabindex="-1"></a>time_parquet_sf <span class="sc">%&lt;&gt;%</span> </span>
+<span id="cb26-7"><a href="flares.html#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(</span>
+<span id="cb26-8"><a href="flares.html#cb26-8" aria-hidden="true" tabindex="-1"></a>    flares_years <span class="sc">%&gt;%</span> </span>
+<span id="cb26-9"><a href="flares.html#cb26-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">pivot_wider</span>(<span class="at">id_cols =</span> GEOID, <span class="at">names_from =</span> year, <span class="at">values_from =</span> mu_flares_area)</span>
+<span id="cb26-10"><a href="flares.html#cb26-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span> </span>
+<span id="cb26-11"><a href="flares.html#cb26-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>GEOID)</span></code></pre></div>
+<pre><code>## Joining, by = &quot;GEOID&quot;</code></pre>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="flares.html#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">spplot</span>(<span class="fu">as_Spatial</span>(time_parquet_sf))</span></code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="flares.html#cb29-1" aria-hidden="true" tabindex="-1"></a>flares_years <span class="sc">%&gt;%</span> </span>
+<span id="cb29-2"><a href="flares.html#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb29-3"><a href="flares.html#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(<span class="at">x =</span> mu_flares_area, <span class="at">y =</span> pop)) <span class="sc">+</span> </span>
+<span id="cb29-4"><a href="flares.html#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>year) <span class="sc">+</span> </span>
+<span id="cb29-5"><a href="flares.html#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;population vs mean of monthly flares per sq km&quot;</span>)</span></code></pre></div>
+<p><img src="_main_files/figure-html/unnamed-chunk-19-1.png" width="672" /></p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="flares.html#cb30-1" aria-hidden="true" tabindex="-1"></a>top_rank_area <span class="ot">&lt;-</span> flares_years <span class="sc">%&gt;%</span> </span>
+<span id="cb30-2"><a href="flares.html#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(basin, year, <span class="fu">desc</span>(mu_flares_area)) <span class="sc">%&gt;%</span> </span>
+<span id="cb30-3"><a href="flares.html#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(year, basin) <span class="sc">%&gt;%</span> </span>
+<span id="cb30-4"><a href="flares.html#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">rank =</span> <span class="fu">row_number</span>()) <span class="sc">%&gt;%</span> </span>
+<span id="cb30-5"><a href="flares.html#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>) </span>
+<span id="cb30-6"><a href="flares.html#cb30-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-7"><a href="flares.html#cb30-7" aria-hidden="true" tabindex="-1"></a>top_rank_area <span class="sc">%&gt;%</span> DT<span class="sc">::</span><span class="fu">datatable</span>()</span></code></pre></div>
+<div id="htmlwidget-17dfcc14ccd6b41c2a50" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-17dfcc14ccd6b41c2a50">{"x":{"filter":"none","vertical":false,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36"],[2015,2015,2015,2015,2015,2015,2016,2016,2016,2016,2016,2016,2017,2017,2017,2017,2017,2017,2018,2018,2018,2018,2018,2018,2019,2019,2019,2019,2019,2019,2020,2020,2020,2020,2020,2020],["48255970200","48255970100","48123970200","48389950300","48329001700","48389950200","48255970200","48255970100","48123970200","48389950300","48329001700","48389950200","48255970100","48255970200","48127950400","48389950300","48329001700","48389950200","48255970100","48255970200","48123970200","48389950200","48389950300","48329001700","48255970100","48255970200","48123970200","48389950300","48329001700","48389950200","48255970100","48255970200","48177000600","48389950300","48329001700","48389950200"],["Gulf Coast Basins","Gulf Coast Basins","Gulf Coast Basins","Permian Basin","Permian Basin","Permian Basin","Gulf Coast Basins","Gulf Coast Basins","Gulf Coast Basins","Permian Basin","Permian Basin","Permian Basin","Gulf Coast Basins","Gulf Coast Basins","Gulf Coast Basins","Permian Basin","Permian Basin","Permian Basin","Gulf Coast Basins","Gulf Coast Basins","Gulf Coast Basins","Permian Basin","Permian Basin","Permian Basin","Gulf Coast Basins","Gulf Coast Basins","Gulf Coast Basins","Permian Basin","Permian Basin","Permian Basin","Gulf Coast Basins","Gulf Coast Basins","Gulf Coast Basins","Permian Basin","Permian Basin","Permian Basin"],[364.178063,795.902121,430.539472,2.691753,3.474523,3.722101,364.178063,795.902121,430.539472,2.691753,3.474523,3.722101,795.902121,364.178063,2318.646952,2.691753,3.474523,3.722101,795.902121,364.178063,430.539472,3.722101,2.691753,3.474523,795.902121,364.178063,430.539472,2.691753,3.474523,3.722101,795.902121,364.178063,942.870544,2.691753,3.474523,3.722101],[4138,2492,6036,1946,5163,3059,4138,2492,6036,1946,5163,3059,2492,4138,2114,1946,5163,3059,2492,4138,6036,3059,1946,5163,2492,4138,6036,1946,5163,3059,2492,4138,2556,1946,5163,3059],[0.0219672759366618,0.0942326927157416,0.0510986830029838,0.371505112096095,0.287809290656588,0.268665466090254,0.0137295474604136,0.0175901026402718,0.0069680022276796,0.371505112096095,0.287809290656588,0.268665466090254,0.0577960515323215,0.00823772847624817,0.0142324384363627,0.371505112096095,0.287809290656588,0.268665466090254,0.0364366411834201,0.0192213664445791,0.0510986830029838,0.268665466090254,0.371505112096095,0.287809290656588,0.0577960515323215,0.0604100088258199,0.0162586718645857,0.371505112096095,0.287809290656588,0.268665466090254,0.0691039746582105,0.0659018278099854,0.013787682818947,0.371505112096095,0.287809290656588,0.268665466090254],[0.0933609227308126,0.107111160720226,0.052260016707597,0.371505112096095,0.287809290656588,0.268665466090254,0.0336373912780134,0.0260710449846885,0.0301946763199449,0.371505112096095,0.287809290656588,0.268665466090254,0.0637641220709852,0.0288320496668686,0.0183296555619823,0.371505112096095,0.287809290656588,0.268665466090254,0.134124532632072,0.0768854657783162,0.0621313531968098,0.268665466090254,0.371505112096095,0.287809290656588,0.153913398102378,0.115328198667474,0.0481953487414506,0.371505112096095,0.287809290656588,0.268665466090254,0.199773308557372,0.194273096564853,0.0578022087409701,0.371505112096095,0.287809290656588,0.268665466090254],[0.207316166652246,0.160823795568199,0.0569053515260501,0.371505112096095,0.287809290656588,0.268665466090254,0.0631559183179026,0.0395777309406115,0.0371626785476245,0.371505112096095,0.287809290656588,0.268665466090254,0.0942326927157416,0.0617829635718613,0.0258771607933867,0.371505112096095,0.287809290656588,0.268665466090254,0.157054487859569,0.116701153413516,0.109165368233647,0.268665466090254,0.371505112096095,0.287809290656588,0.232440642032163,0.197705483429956,0.069680022276796,0.371505112096095,0.287809290656588,0.268665466090254,0.249402526720996,0.210062076144328,0.0758322555042084,0.371505112096095,0.287809290656588,0.268665466090254],[0.191756012863777,0.14951587244231,0.0685186885721828,0.371505112096095,0.287809290656588,0.268665466090254,0.0659018278099854,0.0511997630422196,0.0373562341650601,0.371505112096095,0.287809290656588,0.268665466090254,0.0959079405862437,0.0574352735427303,0.0268475543231387,0.371505112096095,0.359761613320735,0.291054254931108,0.175482214435092,0.128371268754867,0.119810927192602,0.626886087543926,0.402463871437436,0.287809290656588,0.254114161356783,0.209604424562315,0.0689057998070539,0.371505112096095,0.311793398211304,0.268665466090254,0.266259708417923,0.221045714112659,0.0787488807159088,0.371505112096095,0.287809290656588,0.268665466090254],[0.275963903954314,0.18249731489282,0.0841966935844619,0.371505112096095,0.287809290656588,0.268665466090254,0.0878691037466471,0.0653346669495809,0.0429693470706909,0.371505112096095,0.287809290656588,0.268665466090254,0.105540615841631,0.0700206920481094,0.0346107025611547,0.371505112096095,0.287809290656588,0.268665466090254,0.221760936857712,0.173678775374232,0.177103389953523,0.537330932180508,0.371505112096095,0.287809290656588,0.343321110461019,0.306855385740244,0.0888420284029149,0.371505112096095,0.287809290656588,0.268665466090254,0.30280105259325,0.2423265126763,0.104468212128175,0.371505112096095,0.287809290656588,0.268665466090254],[0.359714143462837,0.202286180363125,0.102197366005968,0.371505112096095,0.287809290656588,0.268665466090254,0.131803655619971,0.115592103064643,0.0673573548675695,0.371505112096095,0.287809290656588,0.268665466090254,0.208568359877508,0.134549565112053,0.0444224593619805,0.371505112096095,1.15123716262635,0.537330932180508,0.330442642456534,0.340492777018258,0.195104062375029,2.68665466090254,0.74301022419219,0.287809290656588,0.497548617539116,0.417378242796574,0.116133370461327,0.371505112096095,0.575618581313176,0.268665466090254,0.48875356621898,0.428361880764905,0.136816237203397,0.371505112096095,0.287809290656588,0.268665466090254],[1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>year<\/th>\n      <th>GEOID<\/th>\n      <th>basin<\/th>\n      <th>area<\/th>\n      <th>pop<\/th>\n      <th>min_flares_area<\/th>\n      <th>q1_flares_area<\/th>\n      <th>median_flares_area<\/th>\n      <th>mu_flares_area<\/th>\n      <th>q3_flares_area<\/th>\n      <th>max_flares_area<\/th>\n      <th>rank<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":[1,4,5,6,7,8,9,10,11,12]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
 <!-- ```{r} -->
 <!-- library(xts) -->
 <!-- library(tbl2xts) -->
-<!-- library(sf) -->
-<!-- library(maps) -->
-<!-- library(viridis) -->
-<!-- library(sp) -->
-<!-- ``` -->
-<!-- ```{r} -->
+<!-- #time series intensity -->
 <!-- dates <- seq(min(flares$date), max(flares$date), by = "day") -->
 <!-- density_ts <- list() -->
-<!-- density_ts <- c(density_ts,  -->
+<!-- density_ts <- c(density_ts, -->
 <!--                xts(NULL, dates)) -->
 <!-- for(id in unique(flares$GEOID)) { -->
-<!--   density_ts[[id]] <- xts(flares$density[flares$GEOID == id],  -->
-<!--                           flares$date[flares$GEOID == id])  -->
+<!--   density_ts[[id]] <- xts(flares$density[flares$GEOID == id], -->
+<!--                           flares$date[flares$GEOID == id]) -->
 <!-- } -->
 <!-- density_ts <- do.call(merge, density_ts) -->
 <!-- density_ts[is.na(density_ts)] <- 0 -->
 <!-- density_ts[1:10, 1:5] -->
 <!-- ``` -->
 <!-- ```{r} -->
-<!-- density_ts %>% xts_tbl() %>%  -->
-<!--   pivot_longer(-date) %>%  -->
-<!--   ggplot() +  -->
-<!--   geom_line(aes(x = date, y = value, col = name)) +  -->
+<!-- density_ts %>% xts_tbl() %>% -->
+<!--   pivot_longer(-date) %>% -->
+<!--   ggplot() + -->
+<!--   geom_line(aes(x = date, y = value, col = name)) + -->
 <!--   theme(legend.position = "none") #+ -->
 <!--   #facet_wrap(~name, scales = "free", strip.position = "bottom") -->
 <!-- ``` -->
 <!-- ```{r} -->
 <!-- cum_density_ts <- as.xts(apply(density_ts["2016"],2,cumsum)) -->
-<!-- cum_density_ts %>% xts_tbl() %>%  -->
-<!--   pivot_longer(-date) %>%  -->
-<!--   ggplot() +  -->
-<!--   geom_line(aes(x = date, y = value, col = name)) +  -->
+<!-- cum_density_ts %>% xts_tbl() %>% -->
+<!--   pivot_longer(-date) %>% -->
+<!--   ggplot() + -->
+<!--   geom_line(aes(x = date, y = value, col = name)) + -->
 <!--   theme(legend.position = "none") -->
 <!-- ``` -->
 <!-- ```{r} -->
-<!-- intensity_years <- density_ts %>% xts_tbl() %>%  -->
-<!--   pivot_longer(-date, names_to = "GEOID", values_to = "density") %>%  -->
-<!--   mutate(year = year(date)) %>%  -->
-<!--   group_by(year, GEOID) %>%  -->
-<!--   summarise(tot_density = sum(density),  -->
-<!--             mean_density = mean(density),  -->
-<!--             median_density = median(density)) %>%  -->
-<!--   ungroup() %>%  -->
-<!--   mutate(concentration = mean_density / max(mean_density) * 100,  -->
+<!-- intensity_years <- density_ts %>% xts_tbl() %>% -->
+<!--   pivot_longer(-date, names_to = "GEOID", values_to = "density") %>% -->
+<!--   mutate(year = year(date)) %>% -->
+<!--   group_by(year, GEOID) %>% -->
+<!--   summarise(tot_density = sum(density), -->
+<!--             mean_density = mean(density), -->
+<!--             median_density = median(density)) %>% -->
+<!--   ungroup() %>% -->
+<!--   mutate(concentration = mean_density / max(mean_density) * 100, -->
 <!--          #exposure = concentration / 100 * pop -->
 <!--          ) -->
 <!-- summary(intensity_years$tot_density) -->
@@ -291,35 +322,35 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <!-- maps <- list() -->
 <!-- for(y in 2015:2020) { -->
 <!--   intensity_ <- filter(intensity_years, year == y) -->
-<!--   maps[[as.character(y)]] <- tracts_sf %>%  -->
-<!--     mutate(GEOID = paste0("X", GEOID)) %>%  -->
-<!--     filter(GEOID %in% intensity_$GEOID) %>%  -->
-<!--     left_join(intensity_) %>%  -->
-<!--     ggplot() +  -->
-<!--     geom_sf(aes(fill = concentration), colour = NA, lwd = 0) +  -->
+<!--   maps[[as.character(y)]] <- tracts_sf %>% -->
+<!--     mutate(GEOID = paste0("X", GEOID)) %>% -->
+<!--     filter(GEOID %in% intensity_$GEOID) %>% -->
+<!--     left_join(intensity_) %>% -->
+<!--     ggplot() + -->
+<!--     geom_sf(aes(fill = concentration), colour = NA, lwd = 0) + -->
 <!--     scale_fill_viridis() -->
 <!-- } -->
 <!-- maps -->
 <!-- ``` -->
 <!-- ```{r} -->
-<!-- intensity_ <- intensity_years %>%  -->
-<!--   group_by(GEOID) %>%  -->
+<!-- intensity_ <- intensity_years %>% -->
+<!--   group_by(GEOID) %>% -->
 <!--   summarise(mean_concentr = mean(concentration)) -->
-<!-- intensity_ %>%  -->
-<!--   ggplot() +  -->
+<!-- intensity_ %>% -->
+<!--   ggplot() + -->
 <!--   geom_histogram(aes(x = mean_concentr)) -->
-<!-- tracts_sf %>%  -->
-<!--   mutate(GEOID = paste0("X", GEOID)) %>%  -->
-<!--   filter(GEOID %in% unique(intensity_$GEOID)) %>%  -->
-<!--   left_join(intensity_) %>%  -->
-<!--     ggplot() +  -->
-<!--     #geom_sf(data = filter(states_sf, ID == "texas")) +  -->
-<!--     geom_sf(aes(fill = mean_concentr), colour = NA, lwd = 0) +  -->
+<!-- tracts_sf %>% -->
+<!--   mutate(GEOID = paste0("X", GEOID)) %>% -->
+<!--   filter(GEOID %in% unique(intensity_$GEOID)) %>% -->
+<!--   left_join(intensity_) %>% -->
+<!--     ggplot() + -->
+<!--     #geom_sf(data = filter(states_sf, ID == "texas")) + -->
+<!--     geom_sf(aes(fill = mean_concentr), colour = NA, lwd = 0) + -->
 <!--     scale_fill_viridis() + -->
 <!--     labs(title = "Annual mean tract concentrations") -->
 <!-- ``` -->
 <!-- ```{r} -->
-<!-- intensity_years %>%  -->
+<!-- intensity_years %>% -->
 <!--   filter(GEOID == "X48389950200") -->
 <!-- ``` -->
 

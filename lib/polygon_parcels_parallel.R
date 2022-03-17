@@ -2,23 +2,23 @@ library(sp)
 library(raster)
 library(rgeos)
 
-# polygon_parcels_parallel
-polygon_parcels_parallel <- function(
-  mc.cores = parallel::detectCores(), 
-  input.refs, 
-  polygons_sf, 
-  hysp_dir, 
-  res.link = 12000
-){
-  run_X <- lapply(1:nrow(input.refs), function(r) input.refs[r])
-  polygon_parcels <- parallel::mclapply(FUN = run_polygon_parcels, 
-                     mc.cores = mc.cores,
-                     X = run_X, 
-                     polygons_sf = polygons_sf, 
-                     hysp_dir = hysp_dir, 
-                     res.link = res.link)
-  rbindlist(polygon_parcels)
-}
+# # polygon_parcels_parallel
+# polygon_parcels_parallel <- function(
+#   mc.cores = parallel::detectCores(), 
+#   input.refs, 
+#   polygons_sf, 
+#   hysp_dir, 
+#   res.link = 12000
+# ){
+#   run_X <- lapply(1:nrow(input.refs), function(r) input.refs[r])
+#   polygon_parcels <- parallel::mclapply(FUN = run_polygon_parcels, 
+#                      mc.cores = mc.cores,
+#                      X = run_X, 
+#                      polygons_sf = polygons_sf, 
+#                      hysp_dir = hysp_dir, 
+#                      res.link = res.link)
+#   rbindlist(lapply(polygon_parcels, function(x) x[[2]]))
+# }
 
 # run_polygon_parcels
 run_polygon_parcels <- function(
@@ -45,7 +45,7 @@ run_polygon_parcels <- function(
                                               ".fst")))
   #### linking output
   if(!file.exists(hysp_file)) {
-    out <- stop("Error hysplit not run for X:", X_tag)
+    out <- stop("Error hysp_file not found at:", hysp_file)
   }
   
   print(paste("Linking output from file:", hysp_file))
@@ -68,14 +68,11 @@ run_polygon_parcels <- function(
     polygon_parcels %<>% 
       st_drop_geometry() %>% 
       filter(count > 0)
-    rbind(polygon_parcels, data.frame(id="outside_polygons", count = 1200 - sum(polygon_parcels$count)))
+    rbind(polygon_parcels, data.frame(id="outside_polygons", count = nrow(disp_df) - sum(polygon_parcels$count)))
   }
   
-  get_polygon_hyads <- function(parcels, proj, polygons_sf, res.link) {
+  get_raster_hyads <- function(parcels, proj, res.link) {
     parcels <- spTransform(parcels, proj)
-    polygons_sp <- as_Spatial(polygons_sf)
-    polygons_sp <- spTransform(polygons_sp, proj)
-    
     # create raster with resolution res.link.
     e <- extent(parcels)
     e@xmin <- floor(e@xmin / res.link) * res.link
@@ -95,16 +92,23 @@ run_polygon_parcels <- function(
     r <- crop(trim(r, padding = 1), e)
     
     #  convert to polygons for faster extracting
-    r <- rasterToPolygons(r)
+    rasterToPolygons(r)
+  }
+  
+  get_polygon_hyads <- function(r, polygons_sf) {
+    polygons_sp <- as_Spatial(polygons_sf)
+    polygons_sp <- spTransform(polygons_sp, proj)
+    
     polygon_parcels <- over(polygons_sp, r, fn = mean)
     polygon_parcels <- data.frame(polygon_parcels) %>% 
       rename(hyads = layer)
     polygon_parcels$id <- polygons_sf$id
-    na.omit(polygon_parcels)
+    polygon_parcels <- na.omit(polygon_parcels)
   }
   
+  r <- get_raster_hyads(parcels, proj, res.link)
   polygon_parcels <- full_join(get_polygon_counts(parcels, proj, polygons_sf), 
-                               get_polygon_hyads(parcels, proj, polygons_sf, res.link))
+                               get_polygon_hyads(r, polygons_sf))
 
   polygon_parcels$w <- X$w
   polygon_parcels$source <- X$ID
@@ -113,5 +117,5 @@ run_polygon_parcels <- function(
   polygon_parcels<- data.table(polygon_parcels, stringsAsFactors = FALSE)
 
   print(paste("linked output from", hysp_file))
-  return(polygon_parcels)
+  return(list(r, polygon_parcels))
 }
