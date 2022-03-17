@@ -52,7 +52,6 @@ year.mons <- disperseR::get_yearmon(start.year = as.character(args$year),
                                     start.month = as.character(args$start),
                                     end.year = as.character(args$year),
                                     end.month = as.character(args$end))
-by.time = "month"
 pbl_trim = FALSE
 tracts_sf <- st_read("./data/input/tl_2016_48_tract/tl_2016_48_tract.shp") 
 tracts_sf %<>% 
@@ -75,7 +74,6 @@ linked_counties <- link_all_units(
   link.to = link.to,
   mc.cores = mc.cores,
   year.mons = year.mons,
-  by.time = by.time, 
   pbl_trim = pbl_trim,
   counties. = tracts_sf,
   crosswalk. = crosswalk.,
