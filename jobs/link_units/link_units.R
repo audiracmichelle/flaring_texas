@@ -16,7 +16,7 @@ args = parser$parse_args()
 # args$year = as.integer(2015)
 # args$start = as.integer(7)
 # args$end = as.integer(8)
-# args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas/vanilla"
+# args$wkdir = "/work/08317/m1ch3ll3/stampede2/flaring_texas"
 
 ####
 # override original disperseR functions
