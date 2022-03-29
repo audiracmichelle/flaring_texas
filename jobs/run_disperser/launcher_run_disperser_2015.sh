@@ -1,5 +1,5 @@
 #!/bin/sh
-#SBATCH -J run_disperser            # job name
+#SBATCH -J 2015_run_disperser       # job name
 #SBATCH -N 4                        # number of nodes requested
 #SBATCH -n 24                       # total number of tasks to run in parallel
 #SBATCH -p skx-dev                  # queue (partition) 
