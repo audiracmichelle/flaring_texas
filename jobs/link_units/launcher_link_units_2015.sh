@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH -J link_units               # job name
+#SBATCH -J 2015_link_units          # job name
 #SBATCH -N 4                        # number of nodes requested
 #SBATCH -n 24                       # total number of tasks to run in parallel
-#SBATCH -p skx-normal               # queue (partition) 
+#SBATCH -p normal                   # queue (partition) 
 #SBATCH -t 01:00:00                 # run time (hh:mm:ss) 
 
 module load launcher

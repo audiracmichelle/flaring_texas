@@ -1,0 +1,6 @@
+singularity exec $SCRATCH/disperser_latest.sif Rscript --vanilla jobs/link_units/link_units.R -y 2017 -start 1 -end 2 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+singularity exec $SCRATCH/disperser_latest.sif Rscript --vanilla jobs/link_units/link_units.R -y 2017 -start 3 -end 4 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+singularity exec $SCRATCH/disperser_latest.sif Rscript --vanilla jobs/link_units/link_units.R -y 2017 -start 5 -end 6 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+singularity exec $SCRATCH/disperser_latest.sif Rscript --vanilla jobs/link_units/link_units.R -y 2017 -start 7 -end 8 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+singularity exec $SCRATCH/disperser_latest.sif Rscript --vanilla jobs/link_units/link_units.R -y 2017 -start 9 -end 10 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
+singularity exec $SCRATCH/disperser_latest.sif Rscript --vanilla jobs/link_units/link_units.R -y 2017 -start 11 -end 12 -w "/work/08317/m1ch3ll3/stampede2/flaring_texas"
