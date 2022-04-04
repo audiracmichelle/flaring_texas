@@ -17,10 +17,10 @@ We compare the affected population according to three exposure metrics: 1) raw f
 
   + monthly flare concentrations are flaring counts per tract normalized by tract area. Average of monthly concentrations render year exposures per tract.
 
-* **naive distance-weighted**
+<!-- * **naive distance-weighted** -->
 
-  + kriging method is used to extrapolate exposure values in tracts within the spatial window that have zero flaring counts. This approach produces a proxy of distance weighted exposure to flares.
-  + To estimate monthly flare concentration surfaces, kriging values are obtained for monthly flare concentrations and are assigned to a 12sq km grid. Grid values are averaged over tracts. Average of monthly concentrations render year exposures per tract.
+<!--   + kriging method is used to extrapolate exposure values in tracts within the spatial window that have zero flaring counts. This approach produces a proxy of distance weighted exposure to flares. -->
+<!--   + To estimate monthly flare concentration surfaces, kriging values are obtained for monthly flare concentrations and are assigned to a 12sq km grid. Grid values are averaged over tracts. Average of monthly concentrations render year exposures per tract. -->
 
 * **hyads**
 
@@ -29,5 +29,14 @@ We compare the affected population according to three exposure metrics: 1) raw f
 
 Results are in terms of **total exposed population**. We present how much more population is affected when accounting for wind. Exposure is in different units, once "normalized to a density distribution", population weighted measures are computed per basin (county/tract?).
 
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(
+  warning = F, 
+  message = F, 
+  echo = F, 
+  cache = T
+  )
+#rmd_files: ["index.Rmd", "preprocess_data.Rmd", "flares.Rmd", "parcels_checkpoint.Rmd", "links_checkpoint.Rmd", "hyads.Rmd"]
 
+```
 
