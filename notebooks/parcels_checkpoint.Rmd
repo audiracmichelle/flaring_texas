@@ -42,7 +42,7 @@ polygons_sf %<>%
   mutate(GEOID = as.character(GEOID)) %>% 
   rename(id = GEOID)
 polygons_sf <- polygons_sf[, 'id']
-hysp_dir = "../data/jobs_output/vanilla/hysplit"
+hysp_dir = "../data/jobs_output/polygon_parcels/hysplit"
 mc.cores = parallel::detectCores()
 
 range = which(disperser_input$start_day == as.Date("2018-01-06") & 
