@@ -46,6 +46,8 @@ tracts_sf <- tracts_sf %>%
 tracts_sf <- st_transform(tracts_sf, crs_)
 ```
 
+* Basins data
+
 ```{r, warning=F, message=F}
 #### read National Oil and Gas Assessment Province Boundaries
 basins_sf <- read_sf("../data/input/usprov12/usprov12.shp") %>% 
@@ -64,6 +66,8 @@ basins_sf %>%
   geom_sf(data = state_sf) +
   geom_sf(aes(fill = basin), alpha = 0.5)
 ```
+
+* Plays data
 
 ```{r, warning=F}
 # read low permeability oil and gas play boundaries
@@ -85,6 +89,8 @@ ggplot() +
   geom_sf(data = state_sf) +
   geom_sf(data = play_bounds_sf, aes(col = Shale_play), fill = NA)
 ```
+
+* Centroids of tracts with flares  
 
 ```{r, warning=F, message=F}
 #### get flares location (assuming they are located at tract-centroids)
@@ -113,6 +119,8 @@ ggplot() +
   geom_sf(data = flares_sf, aes(fill = basin), alpha = 0.5) + 
   geom_sf(data = flares_points_sf, aes(col = basin))
 ```
+
+* Extents
 
 ```{r, warning=F, message=F}
 #### assign extent regions
@@ -147,6 +155,8 @@ basins_sf %>%
   geom_sf(data = state_sf) + 
   geom_sf(aes(fill = extent), alpha = 0.5)
 ```
+
+* Plays, basins and flares
 
 ```{r}
 basins_sf %>% 
