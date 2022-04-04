@@ -66,7 +66,7 @@ tracts_sf %<>%
          state_name = statefp)
 crosswalk. = NULL
 duration.run.hours = 12
-res.link = 12000
+res.link = 12000 # <- default value
 overwrite = FALSE
 
 linked_counties <- link_all_units(

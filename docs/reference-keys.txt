@@ -8,3 +8,14 @@ check-3
 group-1
 group-2
 check-4
+links-checkpoint
+check-1-1
+check-2-1
+check-3-1
+hyads
+monthly-hyads
+unweighted-2017-monthly-hyads
+weighted-2017-monthly-hyads
+yearly-hyads
+unweighted-yearly-hyads
+weighted-yearly-hyads

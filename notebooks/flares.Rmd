@@ -64,6 +64,8 @@ ggplot(flares_years) +
   labs(title = "Mean of monthly flares per sq km (for tracts with flares)")
 ```
 
+* Permian Basin area normalized flares per sq km
+
 ```{r}
 time_parquet_sf <- tracts_sf %>% 
   filter(GEOID %in% unique(flares_data$GEOID), 
@@ -79,6 +81,8 @@ time_parquet_sf %<>%
 
 spplot(as_Spatial(time_parquet_sf))
 ```
+
+* Gulf Coast Basins area normalized flares per sq km
 
 ```{r}
 time_parquet_sf <- tracts_sf %>% 
@@ -96,24 +100,24 @@ time_parquet_sf %<>%
 spplot(as_Spatial(time_parquet_sf))
 ```
 
-```{r}
-flares_years %>% 
-  ggplot() +
-  geom_point(aes(x = mu_flares_area, y = pop)) + 
-  facet_wrap(~year) + 
-  labs(title = "population vs mean of monthly flares per sq km")
-```
+<!-- ```{r} -->
+<!-- flares_years %>%  -->
+<!--   ggplot() + -->
+<!--   geom_point(aes(x = mu_flares_area, y = pop)) +  -->
+<!--   facet_wrap(~year) +  -->
+<!--   labs(title = "population vs mean of monthly flares per sq km") -->
+<!-- ``` -->
 
 
-```{r}
-top_rank_area <- flares_years %>% 
-  arrange(basin, year, desc(mu_flares_area)) %>% 
-  group_by(year, basin) %>% 
-  mutate(rank = row_number()) %>% 
-  slice(1:3) 
+<!-- ```{r} -->
+<!-- top_rank_area <- flares_years %>%  -->
+<!--   arrange(basin, year, desc(mu_flares_area)) %>%  -->
+<!--   group_by(year, basin) %>%  -->
+<!--   mutate(rank = row_number()) %>%  -->
+<!--   slice(1:3)  -->
 
-top_rank_area %>% DT::datatable()
-```
+<!-- top_rank_area %>% DT::datatable() -->
+<!-- ``` -->
 
 
 <!-- ```{r} -->

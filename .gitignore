@@ -2,6 +2,7 @@
 **/main*
 .DS_Store
 **/local
+**/_bookdown_files
 
 # History files
 .Rhistory

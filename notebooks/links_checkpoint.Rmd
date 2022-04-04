@@ -1,0 +1,107 @@
+# links checkpoint
+
+```{r, warning=F, message=F}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(viridis)
+library(ggthemes)
+
+disperser_input <- read_rds("../data/jobs_input/disperser_input.rds")
+tracts_sf <- read_rds("../data/preprocessed/tracts_sf.rds")
+```
+
+## check 1
+
+* check disperser was able to link all emissions (compare with `ls | wc` where hyspdisp files are located)
+
+```{r}
+#### number of files disperser will create for each year month
+disperser_input %>% 
+  distinct(year, month, ID) %>% 
+  group_by(year, month) %>% 
+  summarise(n = n())
+```
+
+## check 2
+
+* look at monthly hyads for specific month and sources
+
+```{r}
+links <- read_rds("../data/jobs_output/linked_counties_2016_7_8.rds")
+
+links %<>% 
+  rename(GEOID = geoid, hyads = N, ym = month)  %>% 
+  mutate(year = as.integer(str_sub(ym, 1, 4)),
+         month = as.integer(str_sub(ym, 5, -1)),
+         date = ymd(sprintf("%04d%02d01", year, month)))
+```
+
+```{r}
+GEOID_ = c('48235950100', '48013960600', '48149970600', '48283950300')
+plots <- list()
+for (x in GEOID_) {
+  hyads_sf <- tracts_sf %>% 
+  left_join(
+    links %>% 
+    filter(ID == x, year == 2016, month == 8) %>% 
+    dplyr::select(GEOID, hyads)
+  )
+
+  plots[[x]] <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = hyads), size = 0) +
+    geom_sf(
+      data = filter(tracts_sf, GEOID == x),
+      color = "red", fill = NA
+      ) +
+    scale_fill_viridis(option = "B") +
+    theme_map() +
+    theme(legend.position = "none")
+}
+plots
+```
+
+## check 3
+
+* compare all-region weighted vs unweighted hyads for a given month
+
+```{r}
+hyads_months <- links %>% 
+  filter(year == 2016, month == 8) %>% 
+  left_join(
+    disperser_input %>% 
+    filter(year == 2016, month == 8) %>% 
+    distinct(ID, start_day, w) %>% 
+    group_by(ID) %>% 
+    summarise(w = sum(w))
+  ) %>% 
+  group_by(GEOID) %>% 
+  summarise(
+    unweighted_hyads = sum(hyads),
+    weighted_hyads = sum(w * hyads)
+  )
+```
+
+```{r}
+hyads_sf <- left_join(tracts_sf, hyads_months)
+
+hyads_sf %>% 
+  ggplot() +
+  geom_sf(aes(fill = unweighted_hyads), size = 0) +
+  scale_fill_viridis(option = "B") +
+  theme_map() +
+  theme(legend.position = "none") + 
+  labs(title = "Unweighted Hyads")
+```
+
+```{r}
+hyads_sf %>% 
+  ggplot() +
+  geom_sf(aes(fill = weighted_hyads), size = 0) +
+  scale_fill_viridis(option = "B") +
+  theme_map() +
+  theme(legend.position = "none") + 
+  labs(title = "Weighted Hyads")
+```

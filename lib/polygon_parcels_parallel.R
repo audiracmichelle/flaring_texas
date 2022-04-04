@@ -1,6 +1,7 @@
 library(sp)
 library(raster)
 library(rgeos)
+library(rgdal)
 
 # # polygon_parcels_parallel
 # polygon_parcels_parallel <- function(

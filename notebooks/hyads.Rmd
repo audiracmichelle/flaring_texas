@@ -1,0 +1,613 @@
+# Hyads
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(lubridate)
+library(sf)
+library(viridis)
+library(ggthemes)
+
+disperser_input <- read_rds("../data/jobs_input/disperser_input.rds")
+tracts_sf <- read_rds("../data/preprocessed/tracts_sf.rds")
+```
+
+## 2017 Monthly Hyads
+
+```{r}
+links <- read_rds("../data/jobs_output/linked_counties_2017_1_2.rds") |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_3_4.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_5_6.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_7_8.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_9_10.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_11_12.rds"))
+
+links %<>% 
+  rename(GEOID = geoid, hyads = N, ym = month)  %>% 
+  mutate(year = as.integer(str_sub(ym, 1, 4)),
+         month = as.integer(str_sub(ym, 5, -1)),
+         date = ymd(sprintf("%04d%02d01", year, month)))
+```
+
+```{r}
+xx <- disperser_input %>% 
+  distinct(ID, year, month, start_day, w) %>% 
+  group_by(ID, year, month) %>% 
+  summarise(w = sum(w))  %>% 
+  left_join(
+    tracts_sf %>% 
+      st_drop_geometry() %>% 
+      rename(ID = GEOID) %>% 
+      dplyr::select(ID, basin) 
+  ) %>% 
+  rename(basin_ID = basin)
+
+hyads_months <- left_join(links, xx) %>% 
+  group_by(GEOID, ym, year, month, basin_ID) %>% 
+  summarise(
+    unweighted_hyads = sum(hyads),
+    weighted_hyads = sum(w * hyads)
+  )
+```
+
+* Unweighed hyads values summary in each basin for all tracts-month with positive exposure within 2017
+
+```{r}
+tapply(hyads_months$unweighted_hyads, hyads_months$basin_ID, summary)
+```
+
+```{r}
+hyads_months %>% 
+  ggplot() +
+  geom_violin(aes(x=basin_ID, y=unweighted_hyads)) + 
+  scale_y_log10(labels = scales::comma)
+```
+
+* Weighed hyads values summary in each basin for all tracts-month with positive exposure within 2017
+
+```{r}
+tapply(hyads_months$weighted_hyads, hyads_months$basin_ID, summary)
+```
+
+```{r}
+hyads_months %>% 
+  ggplot() +
+  geom_violin(aes(x=basin_ID, y=weighted_hyads)) + 
+  scale_y_log10(labels = scales::comma)
+```
+
+## Unweighted 2017 Monthly Hyads
+
+**Permian Basin**
+
+```{r, warning=F, message=F}
+color_palette <- c("#274E1D","#58A735", "#91D846", "#FAF856", "#E5983B", "#E75B2F", "#B83364", "#8A32CA", "#4D97F2", "#2C39F4")
+levels_unweighted <- c(0, seq(1000, 120000, length.out=10))
+bplot_unweighted <- data.frame(xmin=levels_unweighted[1:10],
+                               xmax=levels_unweighted[2:11], 
+                               colors=color_palette)
+
+plots <- list()
+
+for(ym_ in unique(hyads_months$ym)) {
+  hyads_sf <- tracts_sf %>% 
+    left_join(
+      filter(hyads_months, ym == ym_, basin_ID == "Permian Basin")
+    ) %>% 
+    filter(extent %in% c("Permian Basin", "Bend Arch-Fort Worth Basin"))
+  
+  year_ = unique(na.omit(hyads_sf$year))
+  month_ = unique(na.omit(hyads_sf$month))
+  
+   map <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = cut(unweighted_hyads, breaks = levels_unweighted)), size = 0) +
+    scale_fill_manual(values = color_palette) +
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = paste("year", year_, "month", month_))
+  
+   box <- hyads_sf %>% 
+     st_drop_geometry() %>% 
+     ggplot() +
+     geom_rect(data = bplot_unweighted, 
+               aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill=colors), alpha = 0.5) + 
+     geom_boxplot(aes(unweighted_hyads), alpha=.2) +
+     geom_point(aes(x=min(unweighted_hyads, na.rm = T), y=0), shape=15) +
+     geom_point(aes(x=max(unweighted_hyads, na.rm = T), y=0), shape=17) + 
+     scale_fill_manual(values = bplot_unweighted$colors, breaks = bplot_unweighted$colors) + 
+     scale_x_sqrt() + 
+     theme_bw() +
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          legend.position = "none"
+    )
+   
+   plots[[ym_]] <- cowplot::plot_grid(box, map, nrow = 2, rel_heights = c(0.2, 0.8))
+}
+plots
+```
+
+**Gulf Coast Basins**
+
+```{r, warning=F, message=F}
+color_palette <- c("#274E1D","#58A735", "#91D846", "#FAF856", "#E5983B", "#E75B2F", "#B83364", "#8A32CA", "#4D97F2", "#2C39F4")
+levels_unweighted <- c(0, seq(700, 65000, length.out=10))
+bplot_unweighted <- data.frame(xmin=levels_unweighted[1:10],
+                               xmax=levels_unweighted[2:11], 
+                               colors=color_palette)
+
+plots <- list()
+
+for(ym_ in unique(hyads_months$ym)) {
+  hyads_sf <- tracts_sf %>% 
+    left_join(
+      filter(hyads_months, ym == ym_, basin_ID == "Gulf Coast Basins")
+    ) %>% 
+    filter(extent %in% c("Gulf Coast Basins", "Bend Arch-Fort Worth Basin"))
+  
+  year_ = unique(na.omit(hyads_sf$year))
+  month_ = unique(na.omit(hyads_sf$month))
+  
+   map <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = cut(unweighted_hyads, breaks = levels_unweighted)), size = 0) +
+    scale_fill_manual(values = color_palette) +
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = paste("year", year_, "month", month_))
+  
+   box <- hyads_sf %>% 
+     st_drop_geometry() %>% 
+     ggplot() +
+     geom_rect(data = bplot_unweighted, 
+               aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill=colors), alpha = 0.5) + 
+     geom_boxplot(aes(unweighted_hyads), alpha=.2) +
+     geom_point(aes(x=min(unweighted_hyads, na.rm = T), y=0), shape=15) +
+     geom_point(aes(x=max(unweighted_hyads, na.rm = T), y=0), shape=17) + 
+     scale_fill_manual(values = bplot_unweighted$colors, breaks = bplot_unweighted$colors) + 
+     scale_x_sqrt() + 
+     theme_bw() +
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          legend.position = "none"
+    )
+   
+   plots[[ym_]] <- cowplot::plot_grid(box, map, nrow = 2, rel_heights = c(0.2, 0.8))
+}
+plots
+```
+
+## Weighted 2017 Monthly Hyads
+
+**Permian Basin**
+
+```{r, warning=F, message=F}
+color_palette <- c("#274E1D","#58A735", "#91D846", "#FAF856", "#E5983B", "#E75B2F", "#B83364", "#8A32CA", "#4D97F2", "#2C39F4")
+levels_weighted <- c(0, seq(67000, 3.5e7, length.out=10))
+bplot_weighted <- data.frame(xmin=levels_weighted[1:10],
+                             xmax=levels_weighted[2:11],
+                             colors=color_palette)
+
+plots <- list()
+
+for(ym_ in unique(hyads_months$ym)) {
+  hyads_sf <- tracts_sf %>% 
+    left_join(
+      filter(hyads_months, ym == ym_, basin_ID == "Permian Basin")
+    ) %>% 
+    filter(extent %in% c("Permian Basin", "Bend Arch-Fort Worth Basin"))
+  
+  year_ = unique(na.omit(hyads_sf$year))
+  month_ = unique(na.omit(hyads_sf$month))
+  
+   map <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = cut(weighted_hyads, breaks = levels_weighted)), size = 0) +
+    scale_fill_manual(values = color_palette) +
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = paste("year", year_, "month", month_))
+  
+   box <- hyads_sf %>% 
+     st_drop_geometry() %>% 
+     ggplot() +
+     geom_rect(data = bplot_weighted, 
+               aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill=colors), alpha = 0.5) + 
+     geom_boxplot(aes(weighted_hyads), alpha=.2) +
+     geom_point(aes(x=min(weighted_hyads, na.rm = T), y=0), shape=15) +
+     geom_point(aes(x=max(weighted_hyads, na.rm = T), y=0), shape=17) + 
+     scale_fill_manual(values = bplot_weighted$colors, breaks = bplot_weighted$colors) + 
+     scale_x_sqrt() + 
+     theme_bw() +
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          legend.position = "none"
+    )
+   
+   plots[[ym_]] <- cowplot::plot_grid(box, map, nrow = 2, rel_heights = c(0.2, 0.8))
+}
+plots
+```
+
+**Gulf Coast Basins**
+
+```{r, warning=F, message=F}
+color_palette <- c("#274E1D","#58A735", "#91D846", "#FAF856", "#E5983B", "#E75B2F", "#B83364", "#8A32CA", "#4D97F2", "#2C39F4")
+levels_weighted <- c(0, seq(23000, 3.8e6, length.out=10))
+bplot_weighted <- data.frame(xmin=levels_weighted[1:10],
+                             xmax=levels_weighted[2:11],
+                             colors=color_palette)
+
+plots <- list()
+
+for(ym_ in unique(hyads_months$ym)) {
+  hyads_sf <- tracts_sf %>% 
+    left_join(
+      filter(hyads_months, ym == ym_, basin_ID == "Gulf Coast Basins")
+    ) %>% 
+    filter(extent %in% c("Gulf Coast Basins", "Bend Arch-Fort Worth Basin"))
+  
+  year_ = unique(na.omit(hyads_sf$year))
+  month_ = unique(na.omit(hyads_sf$month))
+  
+   map <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = cut(weighted_hyads, breaks = levels_weighted)), size = 0) +
+    scale_fill_manual(values = color_palette) +
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = paste("year", year_, "month", month_))
+  
+   box <- hyads_sf %>% 
+     st_drop_geometry() %>% 
+     ggplot() +
+     geom_rect(data = bplot_weighted, 
+               aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill=colors), alpha = 0.5) + 
+     geom_boxplot(aes(weighted_hyads), alpha=.2) +
+     geom_point(aes(x=min(weighted_hyads, na.rm = T), y=0), shape=15) +
+     geom_point(aes(x=max(weighted_hyads, na.rm = T), y=0), shape=17) + 
+     scale_fill_manual(values = bplot_weighted$colors, breaks = bplot_weighted$colors) + 
+     scale_x_sqrt() + 
+     theme_bw() +
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          legend.position = "none"
+    )
+   
+   plots[[ym_]] <- cowplot::plot_grid(box, map, nrow = 2, rel_heights = c(0.2, 0.8))
+}
+plots
+```
+
+## Yearly Hyads
+
+```{r}
+links <- read_rds("../data/jobs_output/linked_counties_2015_7_8.rds") |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2015_9_10.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2015_11_12.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2016_1_2.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2016_3_4.rds")) |>
+  #rbind(read_rds("../data/jobs_output/linked_counties_2016_5_6.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2016_7_8.rds")) |>
+  #rbind(read_rds("../data/jobs_output/linked_counties_2016_9_10.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2016_11_12.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_1_2.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_3_4.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_5_6.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_7_8.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_9_10.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2017_11_12.rds")) |>
+  #rbind(read_rds("../data/jobs_output/linked_counties_2018_1_2.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2018_3_4.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2018_5_6.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2018_7_8.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2018_9_10.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2018_11_12.rds")) |>
+  #rbind(read_rds("../data/jobs_output/linked_counties_2019_1_2.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2019_3_4.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2019_5_6.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2019_7_8.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2019_9_10.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2019_11_12.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2020_1_2.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2020_3_4.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2020_5_6.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2020_7_8.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2020_9_10.rds")) |>
+  rbind(read_rds("../data/jobs_output/linked_counties_2020_11_12.rds"))
+
+links %<>% 
+  rename(GEOID = geoid, hyads = N, ym = month)  %>% 
+  mutate(year = as.integer(str_sub(ym, 1, 4)),
+         month = as.integer(str_sub(ym, 5, -1)),
+         date = ymd(sprintf("%04d%02d01", year, month)))
+```
+
+```{r}
+xx <- disperser_input %>% 
+  distinct(ID, year, month, start_day, w) %>% 
+  group_by(ID, year, month) %>% 
+  summarise(w = sum(w))  %>% 
+  left_join(
+    tracts_sf %>% 
+      st_drop_geometry() %>% 
+      rename(ID = GEOID) %>% 
+      dplyr::select(ID, basin) 
+  ) %>% 
+  rename(basin_ID = basin)
+
+hyads_years <- left_join(links, xx) %>% 
+  group_by(GEOID, year, basin_ID) %>% 
+  summarise(
+    unweighted_hyads = sum(hyads),
+    weighted_hyads = sum(w * hyads)
+  )
+```
+
+* Unweighed hyads values summary in each basin for all tracts-year with positive exposure
+
+```{r}
+tapply(hyads_years$unweighted_hyads, hyads_years$basin_ID, summary)
+```
+
+```{r}
+hyads_years %>% 
+  ggplot() +
+  geom_violin(aes(x=basin_ID, y=unweighted_hyads)) + 
+  scale_y_log10(labels = scales::comma)
+```
+
+* Weighed hyads values summary in each basin for all tracts-year with positive exposure
+
+```{r}
+tapply(hyads_years$weighted_hyads, hyads_years$basin_ID, summary)
+```
+
+```{r}
+hyads_years %>% 
+  ggplot() +
+  geom_violin(aes(x=basin_ID, y=weighted_hyads)) + 
+  scale_y_log10(labels = scales::comma)
+```
+
+
+## Unweighted Yearly Hyads
+
+**Permian Basin**
+
+```{r, warning=F, message=F}
+color_palette <- c("#274E1D","#58A735", "#91D846", "#FAF856", "#E5983B", "#E75B2F", "#B83364", "#8A32CA", "#4D97F2", "#2C39F4")
+levels_unweighted <- c(0, seq(5000, 1.1e6, length.out=10))
+bplot_unweighted <- data.frame(xmin=levels_unweighted[1:10],
+                               xmax=levels_unweighted[2:11], 
+                               colors=color_palette)
+
+plots <- list()
+
+for(year_ in unique(hyads_years$year)) {
+  hyads_sf <- tracts_sf %>% 
+    left_join(
+      filter(hyads_years, year == year_, basin_ID == "Permian Basin")
+    ) %>% 
+    filter(extent %in% c("Permian Basin", "Bend Arch-Fort Worth Basin"))
+  
+   map <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = cut(unweighted_hyads, breaks = levels_unweighted)), size = 0) +
+    scale_fill_manual(values = color_palette) +
+    theme_map() +
+    theme(legend.position = "none") +
+    labs(title = paste("year", year_))
+  
+   box <- hyads_sf %>% 
+     st_drop_geometry() %>% 
+     ggplot() +
+     geom_rect(data = bplot_unweighted, 
+               aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill=colors), alpha = 0.5) + 
+     geom_boxplot(aes(unweighted_hyads), alpha=.2) +
+     geom_point(aes(x=min(unweighted_hyads, na.rm = T), y=0), shape=15) +
+     geom_point(aes(x=max(unweighted_hyads, na.rm = T), y=0), shape=17) + 
+     scale_fill_manual(values = bplot_unweighted$colors, breaks = bplot_unweighted$colors) + 
+     scale_x_sqrt() + 
+     theme_bw() +
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          legend.position = "none"
+    )
+   
+   plots[[as.character(year_)]] <- cowplot::plot_grid(box, map, nrow = 2, rel_heights = c(0.2, 0.8))
+}
+plots
+```
+
+**Gulf Coast Basins**
+
+```{r, warning=F, message=F}
+color_palette <- c("#274E1D","#58A735", "#91D846", "#FAF856", "#E5983B", "#E75B2F", "#B83364", "#8A32CA", "#4D97F2", "#2C39F4")
+levels_unweighted <- c(0, seq(7000, 650000, length.out=10))
+bplot_unweighted <- data.frame(xmin=levels_unweighted[1:10],
+                               xmax=levels_unweighted[2:11], 
+                               colors=color_palette)
+
+plots <- list()
+
+for(year_ in unique(hyads_years$year)) {
+  hyads_sf <- tracts_sf %>% 
+    left_join(
+      filter(hyads_years, year == year_, basin_ID == "Gulf Coast Basins")
+    ) %>% 
+    filter(extent %in% c("Gulf Coast Basins", "Bend Arch-Fort Worth Basin"))
+  
+   map <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = cut(unweighted_hyads, breaks = levels_unweighted)), size = 0) +
+    scale_fill_manual(values = color_palette) +
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = paste("year", year_))
+  
+   box <- hyads_sf %>% 
+     st_drop_geometry() %>% 
+     ggplot() +
+     geom_rect(data = bplot_unweighted, 
+               aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill=colors), alpha = 0.5) + 
+     geom_boxplot(aes(unweighted_hyads), alpha=.2) +
+     geom_point(aes(x=min(unweighted_hyads, na.rm = T), y=0), shape=15) +
+     geom_point(aes(x=max(unweighted_hyads, na.rm = T), y=0), shape=17) + 
+     scale_fill_manual(values = bplot_unweighted$colors, breaks = bplot_unweighted$colors) + 
+     scale_x_sqrt() + 
+     theme_bw() +
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          legend.position = "none"
+    )
+   
+   plots[[as.character(year_)]] <- cowplot::plot_grid(box, map, nrow = 2, rel_heights = c(0.2, 0.8))
+}
+plots
+```
+
+## Weighted Yearly Hyads
+
+**Permian Basin**
+
+```{r, warning=F, message=F}
+color_palette <- c("#274E1D","#58A735", "#91D846", "#FAF856", "#E5983B", "#E75B2F", "#B83364", "#8A32CA", "#4D97F2", "#2C39F4")
+levels_weighted <- c(0, seq(650000, 446e6, length.out=10))
+bplot_weighted <- data.frame(xmin=levels_weighted[1:10],
+                             xmax=levels_weighted[2:11],
+                             colors=color_palette)
+
+plots <- list()
+
+for(year_ in unique(hyads_years$year)) {
+  hyads_sf <- tracts_sf %>% 
+    left_join(
+      filter(hyads_years, year == year_, basin_ID == "Permian Basin")
+    ) %>% 
+    filter(extent %in% c("Permian Basin", "Bend Arch-Fort Worth Basin"))
+  
+   map <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = cut(weighted_hyads, breaks = levels_weighted)), size = 0) +
+    scale_fill_manual(values = color_palette) +
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = paste("year", year_))
+  
+   box <- hyads_sf %>% 
+     st_drop_geometry() %>% 
+     ggplot() +
+     geom_rect(data = bplot_weighted, 
+               aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill=colors), alpha = 0.5) + 
+     geom_boxplot(aes(weighted_hyads), alpha=.2) +
+     geom_point(aes(x=min(weighted_hyads, na.rm = T), y=0), shape=15) +
+     geom_point(aes(x=max(weighted_hyads, na.rm = T), y=0), shape=17) + 
+     scale_fill_manual(values = bplot_weighted$colors, breaks = bplot_weighted$colors) + 
+     scale_x_sqrt() + 
+     theme_bw() +
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          legend.position = "none"
+    )
+   
+   plots[[as.character(year_)]] <- cowplot::plot_grid(box, map, nrow = 2, rel_heights = c(0.2, 0.8))
+}
+plots
+```
+
+**Gulf Coast Basins**
+
+```{r, warning=F, message=F}
+color_palette <- c("#274E1D","#58A735", "#91D846", "#FAF856", "#E5983B", "#E75B2F", "#B83364", "#8A32CA", "#4D97F2", "#2C39F4")
+levels_weighted <- c(0, seq(320000, 47e6, length.out=10))
+bplot_weighted <- data.frame(xmin=levels_weighted[1:10],
+                             xmax=levels_weighted[2:11],
+                             colors=color_palette)
+
+plots <- list()
+
+for(year_ in unique(hyads_years$year)) {
+  hyads_sf <- tracts_sf %>% 
+    left_join(
+      filter(hyads_years, year == year_, basin_ID == "Gulf Coast Basins")
+    ) %>% 
+    filter(extent %in% c("Gulf Coast Basins", "Bend Arch-Fort Worth Basin"))
+  
+   map <- hyads_sf %>% 
+    ggplot() +
+    geom_sf(aes(fill = cut(weighted_hyads, breaks = levels_weighted)), size = 0) +
+    scale_fill_manual(values = color_palette) +
+    theme_map() +
+    theme(legend.position = "none") + 
+    labs(title = paste("year", year_))
+  
+   box <- hyads_sf %>% 
+     st_drop_geometry() %>% 
+     ggplot() +
+     geom_rect(data = bplot_weighted, 
+               aes(xmin=xmin, xmax=xmax, ymin=-Inf, ymax=Inf, fill=colors), alpha = 0.5) + 
+     geom_boxplot(aes(weighted_hyads), alpha=.2) +
+     geom_point(aes(x=min(weighted_hyads, na.rm = T), y=0), shape=15) +
+     geom_point(aes(x=max(weighted_hyads, na.rm = T), y=0), shape=17) + 
+     scale_fill_manual(values = bplot_weighted$colors, breaks = bplot_weighted$colors) + 
+     scale_x_sqrt() + 
+     theme_bw() +
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title = element_blank(),
+          panel.grid.major.y = element_blank(), 
+          panel.grid.minor.y = element_blank(),
+          panel.grid.minor.x = element_blank(),
+          panel.border = element_blank(),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+          legend.position = "none"
+    )
+   
+   plots[[as.character(year_)]] <- cowplot::plot_grid(box, map, nrow = 2, rel_heights = c(0.2, 0.8))
+}
+plots
+```
