@@ -272,12 +272,17 @@ disperser_input %<>%
 
 ```{r}
 #### disperseR input viirs
+ID <- unique(viirs[,c("Latitude", "Longitude")])
+ID$ID <- 1:nrow(ID)
+
+viirs %<>%
+  left_join(ID)
+
 disperser_input_viirs <- viirs %>% 
-  select(GEOID, date, start_hour, Latitude, Longitude)
+  select(ID, GEOID, date, start_hour, Latitude, Longitude)
 
 disperser_input_viirs %<>% 
-  rename(ID = GEOID, 
-         start_day = date) %>% 
+  rename(start_day = date) %>% 
   mutate(uID = ID, 
          Height = 20, 
          year = year(start_day), 
