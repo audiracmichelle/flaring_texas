@@ -172,27 +172,36 @@ basins_sf %>%
   theme_map()
 ```
 
+```{r}
+#### download population 
+# v18 <- load_variables(2018, "acs5", cache = TRUE)
+# # View(v18)
+# 
+# # Estimate!!Total
+# tract_acs <- get_acs(year = 2018,
+#                      geography = "tract",
+#                      variables = "B01001_001",
+#                      state = "TX",
+#                      geometry = FALSE)
+# tract_acs %<>% 
+#   rename(pop = estimate)
+# 
+# write_rds(tract_acs, "../data/preprocessed/tract_acs.rds")
+```
+
 ```{r, warning=F, message=F}
 #### get tracts population
-v18 <- load_variables(2018, "acs5", cache = TRUE)
-# View(v18)
-
-# Estimate!!Total
-tract_acs <- get_acs(year = 2018,
-                     geography = "tract",
-                     variables = "B01001_001",
-                     state = "TX",
-                     geometry = FALSE)
-tract_acs %<>% 
-  rename(pop = estimate)
+tract_acs <- read_rds("../data/preprocessed/tract_acs.rds")
 
 #### join tracts and population
 # all shapefile GEOIDs in acs query
 # sum(!tracts_sf$GEOID %in% tract_acs$GEOID) 
 
 tracts_sf %<>% 
-  left_join(tract_acs %>% 
-              select(GEOID, pop))
+  left_join(
+    tract_acs %>% 
+      select(GEOID, pop)
+    )
 
 #### recover area and population from tracts and add to flares data
 flares_data %<>% 
@@ -202,6 +211,43 @@ flares_data %<>%
       select(GEOID, area, pop)
   )
 ```
+
+* Exact location of flares
+
+```{r}
+viirs <- read.csv("../data/input/viirs.csv")
+
+viirs %<>% 
+  mutate(
+    time = as.POSIXct(Date_Proc), #or Date_Mscan?
+    date = as.Date(time), 
+    start_hour = hour(time)
+  ) %>% 
+  rename(
+    Latitude = Lat_GMTCO, #or Lat_DNB
+    Longitude = Lon_GMTCO
+  )
+
+viirs_sf <- viirs %>% 
+  st_as_sf(coords = c("Longitude", "Latitude"), crs = "28992") %>% 
+  st_set_crs("NAD83") %>% 
+  st_transform(crs_)
+
+ggplot() + 
+  geom_sf(data = state_sf) + 
+  geom_sf(data = viirs_sf, size = 0.5)
+```
+
+```{r}
+#### join tracts and viirs 
+index <- viirs_sf %>% 
+  st_intersects(tracts_sf) %>% 
+  as.numeric()
+
+viirs$GEOID <- tracts_sf$GEOID[index]
+```
+
+* prepare disperseR input
 
 ```{r}
 #### disperseR input
@@ -225,8 +271,26 @@ disperser_input %<>%
 ```
 
 ```{r}
+#### disperseR input viirs
+disperser_input_viirs <- viirs %>% 
+  select(GEOID, date, start_hour, Latitude, Longitude)
+
+disperser_input_viirs %<>% 
+  rename(ID = GEOID, 
+         start_day = date) %>% 
+  mutate(uID = ID, 
+         Height = 20, 
+         year = year(start_day), 
+         month = month(start_day),
+         duration_emiss_hours = 1,
+         duration_run_hours = 12)
+```
+
+```{r}
 #### write rds files
 write_rds(flares_data, "../data/preprocessed/flares_data.rds")
+write_rds(viirs, "../data/preprocessed/viirs.rds")
 write_rds(tracts_sf, "../data/preprocessed/tracts_sf.rds")
 write_rds(disperser_input, "../data/jobs_input/disperser_input.rds")
+write_rds(disperser_input_viirs, "../data/jobs_input/disperser_input_viirs.rds")
 ```
